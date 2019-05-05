@@ -173,6 +173,8 @@ class TransformParquetPartitionsToCSV(luigi.Task):
 
 class RTask_AvantGarde(luigi.Task):
     file_stem_rtask=luigi.Parameter(default='rtask_data')
+    output_dir = luigi.Parameter(default='data/avg_results/', is_global=True)
+
     csv_ds_root_path = ReadHashIndexAndPartitionParquetFile.csv_ds_root_path
     R_SCRIPT_PATH = os.getenv('R_SCRIPT_PATH')
     local_path = os.getenv('local_path')
@@ -186,19 +188,14 @@ class RTask_AvantGarde(luigi.Task):
         return luigi.LocalTarget(self.file_stem_rtask + "_%s.txt" % hex_tag)
 
     def run(self):
-        input_path = self.input()['ID_analyte_glossary'].path
+        # input_path = self.input()['ID_analyte_glossary'].path
         params_file_path = self.input()['params_file'].path
-
-        # subprocess_call_for_r_script = str(
-        #     self.R_SCRIPT_PATH +
-        #     ' "' + self.local_path + 'src/AvG_R_scripts/dummy_r_script.R' + '" ' +
-        #     ' "' + self.local_path + str(input_path) + '" ' +
-        #     ' "' + str(params_file_path) + '"')
 
         subprocess_call_for_r_script = generate_subprocess_call_for_a_analyte(
             hashed_id='0b59f29e',
             csv_ds_root_path=self.csv_ds_root_path,
-            params_file_path=params_file_path)
+            params_file_path=params_file_path,
+            output_dir=self.output_dir)
 
         print('subcall:' + subprocess_call_for_r_script)
 
@@ -211,7 +208,7 @@ class RTask_AvantGarde(luigi.Task):
 # export PYTHONPATH='.'
 # pipenv run luigi --module section_luigi_R RTask --local-scheduler
 
-def generate_subprocess_call_for_a_analyte(hashed_id, csv_ds_root_path, params_file_path):
+def generate_subprocess_call_for_a_analyte(hashed_id, csv_ds_root_path, params_file_path, output_dir):
     R_SCRIPT_PATH = os.getenv('R_SCRIPT_PATH')
     local_path = os.getenv('local_path')
 
@@ -220,7 +217,8 @@ def generate_subprocess_call_for_a_analyte(hashed_id, csv_ds_root_path, params_f
         ' "' + local_path + 'src/AvG_R_scripts/dummy_r_script.R' + '" ' +
         ' "' + local_path + csv_ds_root_path + 'ID_Analyte_' + str(hashed_id) + '.csv' + '" ' +
         ' "' + str(params_file_path) + '" ' +
-        ' "' + str(hashed_id) + '" ')
+        ' "' + str(hashed_id) + '" ' +
+        ' "' + local_path + output_dir + '" ')
 
     return subprocess_call_for_r_script
 
