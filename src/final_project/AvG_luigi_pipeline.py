@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+import os
 
 def hash_str(some_val, salt=''):
     """Converts strings to hash digest
@@ -172,6 +173,8 @@ class TransformParquetPartitionsToCSV(luigi.Task):
 class RTask_AvantGarde(luigi.Task):
     file_stem_rtask=luigi.Parameter(default='rtask_data')
     csv_ds_root_path = ReadHashIndexAndPartitionParquetFile.csv_ds_root_path
+    R_SCRIPT_PATH = os.getenv('R_SCRIPT_PATH')
+    local_r_scripts_path = os.getenv('local_r_scripts_path')
 
     def requires(self):
         return TransformParquetPartitionsToCSV()
@@ -182,11 +185,19 @@ class RTask_AvantGarde(luigi.Task):
 
     def run(self):
         print(self.input().path)
+        print(self.output().path)
         input_path = self.input().path
 
-        subprocess.call('"C:/Program Files/R/R-3.4.3/bin/x64/Rscript.exe" awesome.r ' + str(input_path), shell=True)
+        subprocess_call_for_r_script = str(
+            self.R_SCRIPT_PATH +
+            ' "' + self.local_r_scripts_path + 'src/AvG_R_scripts/dummy_r_script.R' + '" ' +
+            ' "' + self.local_r_scripts_path + str(input_path) + '" ')
 
-        print("Rtask")
+        print('subcall:' + subprocess_call_for_r_script)
+
+        subprocess.call(subprocess_call_for_r_script, shell=True)
+
+        print("Rtask end")
 
 
 # echo python$PATH
