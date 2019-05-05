@@ -122,7 +122,8 @@ class InputCSVFile(luigi.ExternalTask):
 
 class ParamsFile(luigi.ExternalTask):
     def output(self):
-        return luigi.LocalTarget("AvG_Params.R")
+        return luigi.LocalTarget(
+            "C:/Users/Sebastian Vaca/PycharmProjects/Hardvard_Ext/Project/AvG_Example/AvG_Params.R")
 
 class ConvertCSVToParquet(luigi.Task):
     def requires(self):
@@ -174,24 +175,30 @@ class RTask_AvantGarde(luigi.Task):
     file_stem_rtask=luigi.Parameter(default='rtask_data')
     csv_ds_root_path = ReadHashIndexAndPartitionParquetFile.csv_ds_root_path
     R_SCRIPT_PATH = os.getenv('R_SCRIPT_PATH')
-    local_r_scripts_path = os.getenv('local_r_scripts_path')
+    local_path = os.getenv('local_path')
 
     def requires(self):
-        return TransformParquetPartitionsToCSV()
+        return {'params_file': self.clone(ParamsFile),
+                'ID_analyte_glossary': self.clone(TransformParquetPartitionsToCSV)}
 
     def output(self):
-        hex_tag = SaltString.get_hash_of_file(self.input().path)
+        hex_tag = SaltString.get_hash_of_file(self.input()['params_file'].path)
         return luigi.LocalTarget(self.file_stem_rtask + "_%s.txt" % hex_tag)
 
     def run(self):
-        print(self.input().path)
-        print(self.output().path)
-        input_path = self.input().path
+        input_path = self.input()['ID_analyte_glossary'].path
+        params_file_path = self.input()['params_file'].path
 
-        subprocess_call_for_r_script = str(
-            self.R_SCRIPT_PATH +
-            ' "' + self.local_r_scripts_path + 'src/AvG_R_scripts/dummy_r_script.R' + '" ' +
-            ' "' + self.local_r_scripts_path + str(input_path) + '" ')
+        # subprocess_call_for_r_script = str(
+        #     self.R_SCRIPT_PATH +
+        #     ' "' + self.local_path + 'src/AvG_R_scripts/dummy_r_script.R' + '" ' +
+        #     ' "' + self.local_path + str(input_path) + '" ' +
+        #     ' "' + str(params_file_path) + '"')
+
+        subprocess_call_for_r_script = generate_subprocess_call_for_a_analyte(
+            hashed_id='0b59f29e',
+            csv_ds_root_path=self.csv_ds_root_path,
+            params_file_path=params_file_path)
 
         print('subcall:' + subprocess_call_for_r_script)
 
@@ -203,3 +210,17 @@ class RTask_AvantGarde(luigi.Task):
 # echo python$PATH
 # export PYTHONPATH='.'
 # pipenv run luigi --module section_luigi_R RTask --local-scheduler
+
+def generate_subprocess_call_for_a_analyte(hashed_id, csv_ds_root_path, params_file_path):
+    R_SCRIPT_PATH = os.getenv('R_SCRIPT_PATH')
+    local_path = os.getenv('local_path')
+
+    subprocess_call_for_r_script = str(
+        R_SCRIPT_PATH +
+        ' "' + local_path + 'src/AvG_R_scripts/dummy_r_script.R' + '" ' +
+        ' "' + local_path + csv_ds_root_path + 'ID_Analyte_' + str(hashed_id) + '.csv' + '" ' +
+        ' "' + str(params_file_path) + '" ' +
+        ' "' + str(hashed_id) + '" ')
+
+    return subprocess_call_for_r_script
+
