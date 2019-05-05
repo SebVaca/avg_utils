@@ -152,19 +152,19 @@ class ReadHashIndexAndPartitionParquetFile(luigi.Task):
                                                  id_analyte_path=self.output().path)
 
 
-# class TransformParquetPartitionsToCSV(luigi.Task):
-#     parquet_dataset_dirpath=ReadHashIndexAndPartitionParquetFile.root_path
-#     output_dirpath=ReadHashIndexAndPartitionParquetFile.csv_ds_root_path
-#
-#     def requires(self):
-#         return ReadHashIndexAndPartitionParquetFile()
-#     def output(self):
-#         hex_tag = SaltString.get_hash_of_file(self.input().path)
-#         return luigi.LocalTarget(self.csv_ds_root_path+'ID_Analyte_2_'+"_%s.csv" % hex_tag)
-#     def run(self):
-#         parquet_partitions_to_csvs(id_analyte_path=self.input().path,
-#                                    parquet_dataset_dirpath,
-#                                    output_dirpath)
+class TransformParquetPartitionsToCSV(luigi.Task):
+    parquet_dataset_dirpath=ReadHashIndexAndPartitionParquetFile.root_path
+    csv_ds_root_path=ReadHashIndexAndPartitionParquetFile.csv_ds_root_path
+
+    def requires(self):
+        return ReadHashIndexAndPartitionParquetFile()
+    def output(self):
+        hex_tag = SaltString.get_hash_of_file(self.input().path)
+        return luigi.LocalTarget(self.csv_ds_root_path+'ID_Analyte_2_'+"_%s.csv" % hex_tag)
+    def run(self):
+        parquet_partitions_to_csvs(id_analyte_path=self.input().path,
+                                   parquet_dataset_dirpath=self.parquet_dataset_dirpath,
+                                   output_dirpath=self.csv_ds_root_path)
 
 
 
