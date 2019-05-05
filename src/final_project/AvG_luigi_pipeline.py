@@ -160,22 +160,21 @@ class TransformParquetPartitionsToCSV(luigi.Task):
         return ReadHashIndexAndPartitionParquetFile()
     def output(self):
         hex_tag = SaltString.get_hash_of_file(self.input().path)
-        return luigi.LocalTarget(self.csv_ds_root_path+'ID_Analyte_2_'+"_%s.csv" % hex_tag)
+        return luigi.LocalTarget(self.csv_ds_root_path+'ID_Analyte_glossary_2'+"_%s.csv" % hex_tag)
     def run(self):
         parquet_partitions_to_csvs(id_analyte_path=self.input().path,
                                    parquet_dataset_dirpath=self.parquet_dataset_dirpath,
                                    output_dirpath=self.csv_ds_root_path)
+        df = pd.read_csv(self.input().path)
+        df.to_csv(self.output().path)
 
 
-
-
-
-class RTask(luigi.Task):
+class RTask_AvantGarde(luigi.Task):
     file_stem_rtask=luigi.Parameter(default='rtask_data')
-    root_path = ReadHashIndexAndPartitionParquetFile.root_path
+    csv_ds_root_path = ReadHashIndexAndPartitionParquetFile.csv_ds_root_path
 
     def requires(self):
-        return ReadHashIndexAndPartitionParquetFile()
+        return TransformParquetPartitionsToCSV()
 
     def output(self):
         hex_tag = SaltString.get_hash_of_file(self.input().path)
