@@ -28,7 +28,7 @@ def hash_str(some_val, salt=''):
 def hash_value(some_val, salt=''):
     return hash_str(some_val, salt=salt).hex()[:8]
 
-def read_hashindex_and_partition_parquetFile(input_path, rootpath ):
+def read_hashindex_and_partition_parquetFile(input_path, rootpath, csv_ds_root_path, id_analyte_path):
 
     df = pq.read_pandas(input_path).to_pandas()
 
@@ -50,20 +50,20 @@ def read_hashindex_and_partition_parquetFile(input_path, rootpath ):
                         partition_cols=['ID_Analyte'])
 
     ## Create directory files to save the correspondance of the hash ids and the real values
+    df_ID_FragmentIon_charge = df[['ID_FragmentIon_charge',
+                                   'Fragment Ion',
+                                   'Product Charge']].drop_duplicates()
+    df_ID_FragmentIon_charge.to_csv(csv_ds_root_path + "ID_FragmentIon_charge.csv", index=False)
+
+    df_ID_Rep = df[['ID_Rep', 'File Name']].drop_duplicates()
+    df_ID_Rep.to_csv(csv_ds_root_path + "ID_Rep.csv", index=False)
+
     df_ID_Analyte = df[['ID_Analyte',
                         'Protein Name',
                         'Peptide Modified Sequence',
                         'Precursor Charge',
                         'Is Decoy']].drop_duplicates()
-    df_ID_Analyte.to_csv(rootpath + "ID_Analyte.csv", index=False)
-
-    df_ID_FragmentIon_charge = df[['ID_FragmentIon_charge',
-                                   'Fragment Ion',
-                                   'Product Charge']].drop_duplicates()
-    df_ID_FragmentIon_charge.to_csv(rootpath + "ID_FragmentIon_charge.csv", index=False)
-
-    df_ID_Rep = df[['ID_Rep', 'File Name']].drop_duplicates()
-    df_ID_Rep.to_csv(rootpath + "ID_Rep.csv", index=False)
+    df_ID_Analyte.to_csv(id_analyte_path, index=False)
 
 
 def convert_csv_to_parquet_by_chunks(input_csv_path, parquet_file_path, chunksize):
@@ -84,12 +84,20 @@ def convert_csv_to_parquet_by_chunks(input_csv_path, parquet_file_path, chunksiz
         parquet_writer.write_table(table)
         parquet_writer.close()
 
+
 def read_only_one_partition_and_write_csv(parquet_dataset_dirpath, output_dirpath, ID_analyte):
     dataset = pq.ParquetDataset(parquet_dataset_dirpath,
                                 filters=[('ID_Analyte', '=', str(ID_analyte)), ])
     df = dataset.read().to_pandas()
     df.to_csv(output_dirpath+'ID_Analyte_'+ID_analyte+'.csv', index=False)
 
+
+def parquet_partitions_to_csvs(id_analyte_path, parquet_dataset_dirpath,output_dirpath):
+    dd = pd.read_csv(id_analyte_path)
+    dd['ID_Analyte'].map(lambda x: read_only_one_partition_and_write_csv(
+        parquet_dataset_dirpath=parquet_dataset_dirpath,
+        output_dirpath=output_dirpath,
+        ID_analyte=x))
 
 
 class SaltString():
@@ -130,31 +138,36 @@ class ConvertCSVToParquet(luigi.Task):
 
 class ReadHashIndexAndPartitionParquetFile(luigi.Task):
     root_path = luigi.Parameter(default='data/pq_ds/', is_global=True)
+    csv_ds_root_path = luigi.Parameter(default='data/csv_ds/', is_global=True)
 
     def requires(self):
         return ConvertCSVToParquet()
     def output(self):
         hex_tag = SaltString.get_hash_of_file(self.input().path)
-        return luigi.LocalTarget(self.root_path+'_SUCCESS'+"_%s.txt" % hex_tag)
+        return luigi.LocalTarget(self.csv_ds_root_path+'ID_Analyte'+"_%s.csv" % hex_tag)
     def run(self):
-        read_hashindex_and_partition_parquetFile(input_path=self.input().path, rootpath=self.root_path)
+        read_hashindex_and_partition_parquetFile(input_path=self.input().path,
+                                                 rootpath=self.root_path,
+                                                 csv_ds_root_path=self.csv_ds_root_path,
+                                                 id_analyte_path=self.output().path)
 
-        with self.output().open('w') as out_file:
-            out_file.write("Done!" + "\n")
 
-class TransformParquetPartitionsToCSV(luigi.Task):
-    csv_ds_root_path = luigi.Parameter(default='data/csv_ds/', is_global=True)
+# class TransformParquetPartitionsToCSV(luigi.Task):
+#     parquet_dataset_dirpath=ReadHashIndexAndPartitionParquetFile.root_path
+#     output_dirpath=ReadHashIndexAndPartitionParquetFile.csv_ds_root_path
+#
+#     def requires(self):
+#         return ReadHashIndexAndPartitionParquetFile()
+#     def output(self):
+#         hex_tag = SaltString.get_hash_of_file(self.input().path)
+#         return luigi.LocalTarget(self.csv_ds_root_path+'ID_Analyte_2_'+"_%s.csv" % hex_tag)
+#     def run(self):
+#         parquet_partitions_to_csvs(id_analyte_path=self.input().path,
+#                                    parquet_dataset_dirpath,
+#                                    output_dirpath)
 
-    def requires(self):
-        return ReadHashIndexAndPartitionParquetFile()
-    def output(self):
-        hex_tag = SaltString.get_hash_of_file(self.input().path)
-        return luigi.LocalTarget(self.root_path+'_SUCCESS'+"_%s.txt" % hex_tag)
-    def run(self):
-        read_hashindex_and_partition_parquetFile(input_path=self.input().path, rootpath=self.root_path)
 
-        with self.output().open('w') as out_file:
-            out_file.write("Done!" + "\n")
+
 
 
 class RTask(luigi.Task):
