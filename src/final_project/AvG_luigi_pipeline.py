@@ -14,12 +14,12 @@ from .parquet_file_formatting import parquet_partitions_to_csvs, SaltString
 class InputCSVFile(luigi.ExternalTask):
     def output(self):
         return luigi.LocalTarget(
-            "C:/Users/Sebastian Vaca/PycharmProjects/Hardvard_Ext/Project/AvG_Example/AvantGardeDIA_Export.csv")
+            "C:/Users/Sebastian Vaca/PycharmProjects/Hardvard_Ext/Project/AvG_Example_only10/AvantGardeDIA_Export.csv")
 
 class ParamsFile(luigi.ExternalTask):
     def output(self):
         return luigi.LocalTarget(
-            "C:/Users/Sebastian Vaca/PycharmProjects/Hardvard_Ext/Project/AvG_Example/AvG_Params.R")
+            "C:/Users/Sebastian Vaca/PycharmProjects/Hardvard_Ext/Project/AvG_Example_only10/AvG_Params.R")
 
 class ConvertCSVToParquet(luigi.Task):
     def requires(self):
@@ -64,11 +64,10 @@ class TransformParquetPartitionsToCSV(luigi.Task):
                                    parquet_dataset_dirpath=self.parquet_dataset_dirpath,
                                    output_dirpath=self.csv_ds_root_path)
         df = pd.read_csv(self.input().path)
-        df.to_csv(self.output().path)
+        df.to_csv(self.output().path, index=False)
 
 
 class RTask_AvantGarde(luigi.Task):
-    file_stem_rtask=luigi.Parameter(default='rtask_data')
     output_dir = luigi.Parameter(default='data/avg_results/', is_global=True)
 
     csv_ds_root_path = ReadHashIndexAndPartitionParquetFile.csv_ds_root_path
@@ -87,17 +86,52 @@ class RTask_AvantGarde(luigi.Task):
         input_path = self.input()['ID_analyte_glossary'].path
         params_file_path = self.input()['params_file'].path
 
-        run_r_script_for_an_analyte(hashed_id='0c638508', csv_ds_root_path=self.csv_ds_root_path,
-                                    params_file_path=params_file_path,
-                                    output_dir=self.output_dir)
+        # run_r_script_for_an_analyte(hashed_id='f4cb31bc', csv_ds_root_path=self.csv_ds_root_path,
+        #                             params_file_path=params_file_path,
+        #                             output_dir=self.output_dir)
 
-        # run_r_script_for_all_analytes(id_analyte_path=input_path,
-        #                               csv_ds_root_path=self.csv_ds_root_path,
-        #                               params_file_path=params_file_path,
-        #                               output_dir=self.output_dir)
+        run_r_script_for_all_analytes(id_analyte_path=input_path,
+                                      csv_ds_root_path=self.csv_ds_root_path,
+                                      params_file_path=params_file_path,
+                                      output_dir=self.output_dir)
 
         df = pd.read_csv(input_path)
-        df.to_csv(self.output().path)
+        df.to_csv(self.output().path, index=False)
+
+class RTask_Report(luigi.Task):
+    final_results_dir = luigi.Parameter(default='data/final_result/', is_global=True)
+    avg_results_path = RTask_AvantGarde.output_dir
+    csv_ds_root_path = ReadHashIndexAndPartitionParquetFile.csv_ds_root_path
+    R_SCRIPT_PATH = os.getenv('R_SCRIPT_PATH')
+    local_path = os.getenv('local_path')
+
+    def requires(self):
+        return {'params_file': self.clone(ParamsFile),
+                'ID_analyte_glossary': self.clone(RTask_AvantGarde)}
+
+    def output(self):
+        hex_tag = SaltString.get_hash_of_file(self.input()['ID_analyte_glossary'].path)
+        return luigi.LocalTarget(self.final_results_dir + 'ID_Analyte_glossary_4' + "_%s.csv" % hex_tag)
+
+    def run(self):
+        input_path = self.input()['ID_analyte_glossary'].path
+        params_file_path = self.input()['params_file'].path
+        print(input_path)
+        subprocess_call_for_r_script = str(
+            self.R_SCRIPT_PATH +
+            ' "' + self.local_path + 'src/AvG_R_scripts/AvG_final_report.R' + '" ' +
+            ' "' + str(params_file_path) + '" ' +
+            ' "' + self.local_path + self.avg_results_path + '" ' +
+            ' "' + self.local_path + input_path + '" ' +
+            ' "' + self.local_path + self.csv_ds_root_path + 'ID_transition_locator.csv' + '" ' +
+            ' "' + self.local_path + self.csv_ds_root_path + 'ID_Rep.csv' + '" ' +
+            ' "' + self.local_path + self.final_results_dir + '" ')
+        print(subprocess_call_for_r_script)
+
+        subprocess.call(subprocess_call_for_r_script, shell=True)
+
+        df = pd.read_csv(input_path)
+        df.to_csv(self.output().path, index=False)
 
 
 

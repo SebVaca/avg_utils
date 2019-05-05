@@ -503,7 +503,3 @@ transition_results <- A$Results_TransitionRefinementTool$Report.Transition.Value
 peak_Boundaries_results <- A$Results_PeakBoundaries_tool$New_PeakBoundaries %>% select(MinStartTime=left,MaxEndTime=right, ID_Rep, ID_Analyte) %>% distinct()
 write.table(transition_results, file=paste0(output_dir,"/Report_GR_Transitions_",Name_Tag,"_",i,".csv"),quote=F,row.names=F,col.names=F,sep=";")
 write.table(peak_Boundaries_results,file=paste0(output_dir,"/Report_GR_PeakBoundaries_",Name_Tag,"_",i,".csv"),quote=F,row.names=F,col.names=F,sep=";")
-
-if(!file.exists(paste0(output_dir,"/Report_GR_ColNames",Name_Tag,".csv"))){
-  write.table(A$ColNames_Report,file=paste0(output_dir,"/Report_GR_ColNames",Name_Tag,".csv"),quote=F,row.names=F,col.names=F,sep=";")}
-

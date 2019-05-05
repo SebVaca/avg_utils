@@ -51,6 +51,9 @@ def read_hashindex_and_partition_parquetFile(input_path, rootpath, csv_ds_root_p
     df_ID_Rep = df[['ID_Rep', 'File Name']].drop_duplicates()
     df_ID_Rep.to_csv(csv_ds_root_path + "ID_Rep.csv", index=False)
 
+    df_transition_locator = df[['Transition Locator', 'ID_FragmentIon_charge', 'ID_Analyte']].drop_duplicates()
+    df_transition_locator.to_csv(csv_ds_root_path + "ID_transition_locator.csv", index=False)
+
     df_ID_Analyte = df[['ID_Analyte',
                         'Protein Name',
                         'Peptide Modified Sequence',
@@ -82,7 +85,7 @@ def read_only_one_partition_and_write_csv(parquet_dataset_dirpath, output_dirpat
     dataset = pq.ParquetDataset(parquet_dataset_dirpath,
                                 filters=[('ID_Analyte', '=', str(ID_analyte)), ])
     df = dataset.read().to_pandas()
-    df.to_csv(output_dirpath+'ID_Analyte_'+ID_analyte+'.csv', index=False)
+    df.to_csv(output_dirpath+'data_analyte_'+ID_analyte+'.csv', index=False)
 
 
 def parquet_partitions_to_csvs(id_analyte_path, parquet_dataset_dirpath,output_dirpath):

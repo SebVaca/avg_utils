@@ -10,7 +10,7 @@ def generate_subprocess_call_for_a_analyte(hashed_id, csv_ds_root_path, params_f
     subprocess_call_for_r_script = str(
         R_SCRIPT_PATH +
         ' "' + local_path + 'src/AvG_R_scripts/AvG_from_partitionedParquet.R' + '" ' +
-        ' "' + local_path + csv_ds_root_path + 'ID_Analyte_' + str(hashed_id) + '.csv' + '" ' +
+        ' "' + local_path + csv_ds_root_path + 'data_analyte_' + str(hashed_id) + '.csv' + '" ' +
         ' "' + str(params_file_path) + '" ' +
         ' "' + str(hashed_id) + '" ' +
         ' "' + local_path + output_dir + '" ')
