@@ -1,4 +1,5 @@
 import hashlib
+import csv
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -20,6 +21,15 @@ def hash_str(some_val, salt=''):
 
 def hash_value(some_val, salt=''):
     return hash_str(some_val, salt=salt).hex()[:8]
+
+def hash_params_file(params_file):
+    with open(params_file, 'r') as csvfile:
+        p = csv.reader(csvfile, delimiter=',')
+        q = ''
+        for row in p:
+            q = q + hash_value(', '.join(row))
+        q = hash_value(q)
+        return q
 
 def read_hashindex_and_partition_parquetFile(input_path, rootpath, csv_ds_root_path, id_analyte_path):
 

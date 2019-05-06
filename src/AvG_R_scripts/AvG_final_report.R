@@ -14,10 +14,12 @@ print(args)
 
 params_file <- as.character(args[1])
 avg_results_path <- as.character(args[2])
-MetaData_Analytes <- as.character(args[3])
+MetaData_Analytes_path <- as.character(args[3])
 Transition_Locator <- as.character(args[4])
 MetaData_Replicate <- as.character(args[5])
 output_path <- as.character(args[6])
+success_file <- as.character(args[7])
+
 
 # params_file <- "C:/Users/Sebastian Vaca/PycharmProjects/Hardvard_Ext/Project/AvG_Example_only10/AvG_Params.R"
 # avg_results_path<- "C:/Users/Sebastian Vaca/PycharmProjects/Hardvard_Ext/pset_3_cookiecutter/2019sp-final-project-SebVaca/data/avg_results/"
@@ -29,7 +31,7 @@ output_path <- as.character(args[6])
 #                            stringsAsFactors = F) %>% change_names()
 # output_path<- "C:/Users/Sebastian Vaca/PycharmProjects/Hardvard_Ext/pset_3_cookiecutter/2019sp-final-project-SebVaca/data/final_result/"
 
-MetaData_Analytes<- fread(MetaData_Analytes, stringsAsFactors = F) %>% change_names()
+MetaData_Analytes<- fread(MetaData_Analytes_path, stringsAsFactors = F) %>% change_names()
 Transition_Locator<- fread(Transition_Locator, stringsAsFactors = F) %>% change_names()
 MetaData_Replicate<- fread(MetaData_Replicate, stringsAsFactors = F) %>% change_names()
 
@@ -79,3 +81,7 @@ if(length(Translist)>=1){
   
   write.table(Trans_results,file=paste0(output_path,"Transition_results.csv"),quote=F,row.names=F,col.names=T,sep=",")
 }  
+
+
+write.table(
+  fread(MetaData_Analytes_path, stringsAsFactors = F), file = success_file, quote=F,row.names=F,col.names=T,sep=",")

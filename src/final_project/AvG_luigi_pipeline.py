@@ -7,7 +7,7 @@ import pyarrow.parquet as pq
 import os
 from .luigi_avg_rtask_utils import run_r_script_for_an_analyte, run_r_script_for_all_analytes
 from .parquet_file_formatting import read_hashindex_and_partition_parquetFile, convert_csv_to_parquet_by_chunks
-from .parquet_file_formatting import parquet_partitions_to_csvs, SaltString
+from .parquet_file_formatting import parquet_partitions_to_csvs, SaltString, hash_params_file, hash_value
 
 
 
@@ -23,10 +23,13 @@ class ParamsFile(luigi.ExternalTask):
 
 class ConvertCSVToParquet(luigi.Task):
     def requires(self):
-        return {'inputcsv': self.clone(InputCSVFile)}
+        return {'inputcsv': self.clone(InputCSVFile),
+                'params_file': self.clone(ParamsFile)}
 
     def output(self):
-        hex_tag = SaltString.get_hash_of_file(self.input()['inputcsv'].path)
+        params_tag = hash_params_file(self.input()['params_file'].path)
+        csv_file_tag = SaltString.get_hash_of_file(self.input()['inputcsv'].path)
+        hex_tag = hash_value(csv_file_tag + params_tag)
         return luigi.LocalTarget("data/AvantGardeDIA_Export_%s.parquet" % hex_tag)
 
     def run(self):
@@ -125,13 +128,14 @@ class RTask_Report(luigi.Task):
             ' "' + self.local_path + input_path + '" ' +
             ' "' + self.local_path + self.csv_ds_root_path + 'ID_transition_locator.csv' + '" ' +
             ' "' + self.local_path + self.csv_ds_root_path + 'ID_Rep.csv' + '" ' +
-            ' "' + self.local_path + self.final_results_dir + '" ')
+            ' "' + self.local_path + self.final_results_dir + '" ' +
+            ' "' + self.local_path + self.output().path + '" ')
         print(subprocess_call_for_r_script)
 
         subprocess.call(subprocess_call_for_r_script, shell=True)
 
-        df = pd.read_csv(input_path)
-        df.to_csv(self.output().path, index=False)
+        # df = pd.read_csv(input_path)
+        # df.to_csv(self.output().path, index=False)
 
 
 
