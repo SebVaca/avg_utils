@@ -12,21 +12,25 @@ from .parquet_file_formatting import parquet_partitions_to_csvs, SaltString, has
 
 
 class InputCSVFile(luigi.ExternalTask):
+    # initial CSV file
     def output(self):
         return luigi.LocalTarget(
             "C:/Users/Sebastian Vaca/PycharmProjects/Hardvard_Ext/Project/AvG_Example_only10/AvantGardeDIA_Export.csv")
 
 class ParamsFile(luigi.ExternalTask):
+    # Parameters file for the avant-garde R script
     def output(self):
         return luigi.LocalTarget(
             "C:/Users/Sebastian Vaca/PycharmProjects/Hardvard_Ext/Project/AvG_Example_only10/AvG_Params.R")
 
 class ConvertCSVToParquet(luigi.Task):
+    # Converts CSV to parquet file
     def requires(self):
         return {'inputcsv': self.clone(InputCSVFile),
                 'params_file': self.clone(ParamsFile)}
 
     def output(self):
+        # salted graph using the parameters used for the R script and the name of the initial csv file
         params_tag = hash_params_file(self.input()['params_file'].path)
         csv_file_tag = SaltString.get_hash_of_file(self.input()['inputcsv'].path)
         hex_tag = hash_value(csv_file_tag + params_tag)
@@ -38,6 +42,7 @@ class ConvertCSVToParquet(luigi.Task):
                                          chunksize=20000)
 
 class ReadHashIndexAndPartitionParquetFile(luigi.Task):
+    # Reads parquet file, creates index for each analyte and creates partitions for the parquet file
     root_path = luigi.Parameter(default='data/pq_ds/', is_global=True)
     csv_ds_root_path = luigi.Parameter(default='data/csv_ds/', is_global=True)
 
@@ -54,6 +59,8 @@ class ReadHashIndexAndPartitionParquetFile(luigi.Task):
 
 
 class TransformParquetPartitionsToCSV(luigi.Task):
+    # transforms each parquet partition to a csv file
+
     parquet_dataset_dirpath = ReadHashIndexAndPartitionParquetFile.root_path
     csv_ds_root_path = ReadHashIndexAndPartitionParquetFile.csv_ds_root_path
 
@@ -71,6 +78,8 @@ class TransformParquetPartitionsToCSV(luigi.Task):
 
 
 class RTask_AvantGarde(luigi.Task):
+    # Runs AvG_from_partitionedParquet R script on the individual csv files containing the data of each analyte.
+
     output_dir = luigi.Parameter(default='data/avg_results/', is_global=True)
 
     csv_ds_root_path = ReadHashIndexAndPartitionParquetFile.csv_ds_root_path
@@ -102,6 +111,9 @@ class RTask_AvantGarde(luigi.Task):
         df.to_csv(self.output().path, index=False)
 
 class RTask_Report(luigi.Task):
+    # Runs the AvG_final_report to create a summary of all the individual csv containing the results that were created
+    # by the AvG_from_partitionedParquet R script.
+
     final_results_dir = luigi.Parameter(default='data/final_result/', is_global=True)
     avg_results_path = RTask_AvantGarde.output_dir
     csv_ds_root_path = ReadHashIndexAndPartitionParquetFile.csv_ds_root_path
