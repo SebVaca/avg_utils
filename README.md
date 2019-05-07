@@ -1,6 +1,6 @@
 # Integrating an R script as a task in a Luigi workflow
 
-I work in the field of Proteomics and I use a method called mass-spectrometry to quantify peptides to understand how drugs modulate interesting protein modifications in cancerous cells. The signals we measure are called chromatograms, they correspond to the intensity of each peptide as a function of time. I have developed an R package, called `Avant-garde` (AvG), that curates the data automatically to remove noise and interfering signals. 
+I work in the field of Proteomics and I use a method called mass-spectrometry to quantify peptides to understand how drugs modulate interesting protein modifications in cancerous cells. The signals we measure are called chromatograms, they correspond to the intensity of each peptide as a function of time. I have developed an R package, called Avant-garde (AvG), that curates the data automatically to remove noise and interfering signals. 
 
 ![AvG](http://drive.google.com/uc?export=view&id=1QOqZKxeFiQYlkPiX-07a4BMpROpuSmyh)
 
@@ -32,6 +32,12 @@ and  5 luigi tasks for the main data analysis:
 - `RTask_Report`: Summarize all the individual csv containing the results that were created by the `avant-garde` R script and creates a report.
 
 The workflow works and we are able to curate mass spectrometry data automatically only providing the two initial files.
+# Overview of the scripts
+- `final_project/parquet_file_formatting.py`: functions to convert the csv to a parquet file, index and partition it
+- `final_project/luigi_avg_rtask_utils.py`: tools to run the `avant-garde` R script in Luigi
+- `final_project/AvG_luigi_pipeline.py`: Main Luigi workflow script
+- `AvG_R_scripts/AvG_from_partitionedParquet.R`: R script to run `avant-garde` on a partitioned parquet file
+- `AvG_R_scripts/AvG_final_report.R`: R script to summarise the individual files and create a the final report
 
 # Run the pipeline locally
 `pipenv run luigi --module final_project.AvG_luigi_pipeline RTask_Report --local-scheduler`
