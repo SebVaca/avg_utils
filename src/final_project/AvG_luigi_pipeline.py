@@ -133,14 +133,3 @@ class RTask_Report(luigi.Task):
         print(subprocess_call_for_r_script)
 
         subprocess.call(subprocess_call_for_r_script, shell=True)
-
-        # df = pd.read_csv(input_path)
-        # df.to_csv(self.output().path, index=False)
-
-
-
-# echo python$PATH
-# export PYTHONPATH='.'
-# pipenv run luigi --module section_luigi_R RTask --local-scheduler
-
-
