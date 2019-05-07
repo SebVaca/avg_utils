@@ -7,7 +7,7 @@ I work in the field of Proteomics and I use a method called mass-spectrometry to
 For my project, I would like to improve my analysis workflow by using parquet files, and a Luigi workflow. My workflow starts from large CSV files (>50Gb) which contain the data for all peptides (8000-14000) measured in several samples (typically around 100 samples). Each row in this file contains the information for a given peptide in a given sample. A peptide is defined by its sequence, its charge and the name of the protein it belongs to. Since this information is written in every row the data is very redundant. In order to query the data faster and in parallel it is converted into an SQLite database. The conversion is done by reading the CSV file in chunks, doing some data wrangling on each chunk and then adding the information into the SQLite file. The SQLite is then indexed by a column containing a unique integer created by concatenating the information of the sequence, charge and protein name of each peptide. The final SQLite database is around the same size as the input CSV file (>50Gb).
 
 # Results
-1) Use a parquet file instead of an SQLite database.
+## 1) Use a parquet file instead of an SQLite database.
 
 - The initial CSV file was read in chunks and written to a parquet file.
 - A unique index for each analyte was created by concatenating several columns together to ensure the uniqueness of each analyte (peptide sequence, peptide charge, and protein name) and by calculating a hashed value for it.
@@ -15,7 +15,7 @@ For my project, I would like to improve my analysis workflow by using parquet fi
 
 The file CSV to Parquet file was really fast and the file size was 2 to 3 times smaller that the original CSV or the SQLite database. 
 
-2) Use Luigi to manage and automate the workflow integrating an R script as a luigi task.
+## 2) Use Luigi to manage and automate the workflow integrating an R script as a luigi task.
 - I have used the `subprocess` module to call and pass arguments to the `Rscript.exe` executable.
 - It is necessary to provide absolute paths to the `subprocess` module. The paths to the `Rscript.exe` and the App were added as an environment variables in the `.env` file.
 - In order to be sure that the R script has run I have made sure that a `_SUCCESS` file is written at the final step of the R script. It this is not done if the R script fails, luigi will not output an error and will continue running. My `_SUCCESS` file was the `ID_analyte_glossary` that contains the hashed IDs of all analytes.
