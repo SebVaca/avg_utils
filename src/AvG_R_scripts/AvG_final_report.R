@@ -1,3 +1,5 @@
+.libPaths(c( "C:/Users/svaca/Documents/R/win-library/3.5" , "C:/Program Files/R/R-3.5.2/library"))
+
 library(dplyr)
 library(tidyr)
 library(stringr)

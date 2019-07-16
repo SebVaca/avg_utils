@@ -1,9 +1,14 @@
+print("_________________")
+.libPaths(c( "C:/Users/svaca/Documents/R/win-library/3.5" , "C:/Program Files/R/R-3.5.2/library"))
+
 library(dplyr)
 library(tidyr)
 library(stringr)
 library(data.table)
-library(AvantGardeDIA)
 library(GA)
+library(AvantGardeDIA)
+packageVersion("AvantGardeDIA")
+#source("C:/Users/svaca/Documents/Code_saved/GeneticAlgorithm/20190118_AvantGardeForPublication/r_package/AvantGardeDIA/R/AvantGardeDIA.R")
 
 args <- commandArgs(TRUE)
 analyte_data <- as.character(args[1])
@@ -11,11 +16,12 @@ params_file <- as.character(args[2])
 analyte_hash_id <- as.character(args[3])
 output_dir <- as.character(args[4])
 
+print(args)
 # args <- commandArgs(TRUE)
-# analyte_data <- "C:/Users/Sebastian Vaca/PycharmProjects/Hardvard_Ext/pset_3_cookiecutter/2019sp-final-project-SebVaca/data/csv_ds/ID_Analyte_0b59f29e.csv"
-# params_file <-  "C:/Users/Sebastian Vaca/PycharmProjects/Hardvard_Ext/Project/AvG_Example/AvG_Params.R"
-# analyte_hash_id <- "0b59f29e"
-# output_dir <-  "C:/Users/Sebastian Vaca/PycharmProjects/Hardvard_Ext/pset_3_cookiecutter/2019sp-final-project-SebVaca/data/avg_results/"
+# analyte_data <- "C:/Users/svaca/Documents/Code_saved/GeneticAlgorithm/Luigi_AvG_workflow/2019sp-final-project-SebVaca/data/csv_ds/data_analyte_4ada7661.csv"
+# params_file <-  "C:/Users/svaca/Documents/Example_AvG/luigi_test/AvantGardeDIA/AvG_Params.R"
+# analyte_hash_id <- "4ada7661"
+# output_dir <-  "C:/Users/svaca/Documents/Code_saved/GeneticAlgorithm/Luigi_AvG_workflow/2019sp-final-project-SebVaca/data/avg_results/"
 
 #############################################
 

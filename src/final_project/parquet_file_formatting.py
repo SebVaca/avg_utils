@@ -152,7 +152,7 @@ def parquet_partitions_to_csvs(id_analyte_path, parquet_dataset_dirpath,output_d
         ID_analyte=x))
 
 
-class SaltString()
+class SaltString():
     """ calculates a hash string from the name of a file
   
         """

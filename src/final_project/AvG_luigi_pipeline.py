@@ -10,18 +10,23 @@ from .parquet_file_formatting import read_hashindex_and_partition_parquetFile, c
 from .parquet_file_formatting import parquet_partitions_to_csvs, SaltString, hash_params_file, hash_value
 
 
-
 class InputCSVFile(luigi.ExternalTask):
     # initial CSV file
     def output(self):
-        return luigi.LocalTarget(
-            "C:/Users/Sebastian Vaca/PycharmProjects/Hardvard_Ext/Project/AvG_Example_only10/AvantGardeDIA_Export.csv")
+        # return luigi.LocalTarget(
+        # "C:/Users/Sebastian Vaca/PycharmProjects/Hardvard_Ext/Project/AvG_Example_only10/AvantGardeDIA_Export.csv")
+        INPUT_AVG_EXPORT_REPORT = os.getenv('INPUT_AVG_EXPORT_REPORT')
+        return luigi.LocalTarget(INPUT_AVG_EXPORT_REPORT)
+
 
 class ParamsFile(luigi.ExternalTask):
     # Parameters file for the avant-garde R script
     def output(self):
-        return luigi.LocalTarget(
-            "C:/Users/Sebastian Vaca/PycharmProjects/Hardvard_Ext/Project/AvG_Example_only10/AvG_Params.R")
+        # return luigi.LocalTarget(
+        #     "C:/Users/Sebastian Vaca/PycharmProjects/Hardvard_Ext/Project/AvG_Example_only10/AvG_Params.R")
+        INPUT_AVG_PARAMS = os.getenv('INPUT_AVG_PARAMS')
+        return luigi.LocalTarget(INPUT_AVG_PARAMS)
+
 
 class ConvertCSVToParquet(luigi.Task):
     # Converts CSV to parquet file
@@ -40,6 +45,7 @@ class ConvertCSVToParquet(luigi.Task):
         convert_csv_to_parquet_by_chunks(input_csv_path=self.input()['inputcsv'].path,
                                          parquet_file_path=self.output().path,
                                          chunksize=20000)
+
 
 class ReadHashIndexAndPartitionParquetFile(luigi.Task):
     # Reads parquet file, creates index for each analyte and creates partitions for the parquet file
@@ -109,6 +115,7 @@ class RTask_AvantGarde(luigi.Task):
 
         df = pd.read_csv(input_path)
         df.to_csv(self.output().path, index=False)
+
 
 class RTask_Report(luigi.Task):
     # Runs the AvG_final_report to create a summary of all the individual csv containing the results that were created
