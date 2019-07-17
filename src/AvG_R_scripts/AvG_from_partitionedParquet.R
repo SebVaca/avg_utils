@@ -25,20 +25,87 @@ print(args)
 
 #############################################
 
-source(params_file)
-data= fread(file=analyte_data,
-            header =T, stringsAsFactors = F)
-names(data)<-gsub(names(data),pattern = "\\.",replacement = "")
-names(data)<-gsub(names(data),pattern = " ",replacement = "")
 
-
-
+Filter_Na_Shared_Or_LowMassTransitions_modif<-function(D1){
+  # Remove NA replictaes (Non integrated peaks) and remove transitions y1-3 and b1-3
+  D1<-as.data.frame(D1) %>% filter(!is.na(as.numeric(D1$MinStartTime))) %>%
+    mutate(Transition_Filter=paste0(FragmentIon," "))%>%
+    mutate(Transition_Filter=substr(Transition_Filter,start=1,stop = str_locate(Transition_Filter,pattern = " ")-1)) %>%
+    filter(!grepl(paste(c("precursor",paste0("^y", 0:RemoveTransitionBelowOrdinal_Filter,"$"),paste0("^b",0:RemoveTransitionBelowOrdinal_Filter,"$")), collapse="|"), Transition_Filter)) %>%
+    select(-Transition_Filter)
+  
+  ## Remove transition that are not in light AND in the heavy version
+  A0<-D1 %>% select(ID_Analyte,ID_FragmentIon_charge,IsotopeLabelType) %>% 
+    distinct() %>% group_by(ID_Analyte) %>% summarise(TotalNumLabels=length(unique(IsotopeLabelType)))
+  
+  A1<-D1 %>% select(ID_Analyte,ID_FragmentIon_charge,IsotopeLabelType) %>% 
+    distinct() %>%
+    group_by(ID_Analyte,ID_FragmentIon_charge) %>% 
+    summarise(NumLabels=length(unique(IsotopeLabelType))) %>%
+    left_join(A0, by = "ID_Analyte") %>%
+    mutate(diff=TotalNumLabels-NumLabels) %>%
+    filter(diff!=0) %>% select(ID_Analyte,ID_FragmentIon_charge) %>%
+    ungroup %>%
+    mutate(ID_Analyte=as.integer(ID_Analyte),ID_FragmentIon_charge=as.integer(ID_FragmentIon_charge),Remove="DoNotKeep")
+  
+  if (dim(A1)[1]>=1) {
+    D1<-D1 %>% left_join(A1, by = c("ID_Analyte", "ID_FragmentIon_charge")) %>% filter(is.na(Remove)) %>% select(-Remove)
+  }
+  
+  if(RemoveSharedTransitionsBetweenLightAndHeavy_Filter==TRUE){
+    ## Remove shared transitions between light and heavy (b ions if the labeling is in C-ter)
+    RemoveSharedTransitionsLightAndHeavy<-D1 %>% select(ProteinName,PeptideModifiedSequence,PrecursorCharge,ProductMz,ProductCharge,FragmentIon,IsotopeLabelType,IsDecoy) %>%
+      distinct() %>%
+      group_by(ProteinName,PeptideModifiedSequence,PrecursorCharge,ProductMz,IsDecoy) %>%
+      tally %>%
+      filter(n>1) %>% ungroup %>%
+      select(ProteinName,PeptideModifiedSequence,PrecursorCharge,ProductMz,IsDecoy) %>%
+      mutate(Remove="Remove")
+    
+    ## Filter less than MinimalInitialNumberOfTransitions_Filter transitions
+    FilterLessThanNTrans<-D1 %>%
+      select(ProteinName,PeptideModifiedSequence,PrecursorCharge,IsotopeLabelType,FragmentIon,ProductCharge,IsDecoy) %>%
+      distinct()  %>%
+      group_by(ProteinName,PeptideModifiedSequence,PrecursorCharge,IsotopeLabelType,IsDecoy) %>%
+      tally() %>%
+      mutate(Keep=ifelse(n>=MinimalInitialNumberOfTransitions_Filter,"keep","DoNOTKeep")) %>%
+      select(ProteinName,PeptideModifiedSequence,PrecursorCharge,IsotopeLabelType,IsDecoy,Keep)
+    
+    
+    D1<- D1 %>% left_join(RemoveSharedTransitionsLightAndHeavy,by=c("ProteinName","PeptideModifiedSequence","PrecursorCharge","ProductMz","IsDecoy")) %>%
+      filter(is.na(Remove)) %>%
+      select(-Remove) %>%
+      left_join(data.frame(FilterLessThanNTrans),by = c("ProteinName","PeptideModifiedSequence", "PrecursorCharge", "IsotopeLabelType","IsDecoy")) %>%
+      filter(Keep=="keep") %>% select(-Keep)%>%
+      #select(ID_Analyte,IsotopeLabelType,ID_FragmentIon_charge,ID_Rep,InterpolatedTimes,
+      #       InterpolatedIntensities,InterpolatedMassErrors,Area,LibraryIntensity,MinStartTime,MaxEndTime)%>%
+      arrange(ID_Analyte,ID_FragmentIon_charge,ID_Rep)
+  } else {
+    
+    ## Filter less than MinimalInitialNumberOfTransitions_Filter transitions
+    FilterLessThanNTrans<-D1 %>%
+      select(ProteinName,PeptideModifiedSequence,PrecursorCharge,IsotopeLabelType,FragmentIon,ProductCharge,IsDecoy) %>%
+      distinct()  %>%
+      group_by(ProteinName,PeptideModifiedSequence,PrecursorCharge,IsotopeLabelType,IsDecoy) %>%
+      tally() %>%
+      mutate(Keep=ifelse(n>=MinimalInitialNumberOfTransitions_Filter,"keep","DoNOTKeep")) %>%
+      select(ProteinName,PeptideModifiedSequence,PrecursorCharge,IsotopeLabelType,IsDecoy,Keep)
+    
+    D1<- D1 %>%
+      left_join(data.frame(FilterLessThanNTrans),by = c("ProteinName","PeptideModifiedSequence", "PrecursorCharge", "IsotopeLabelType","IsDecoy")) %>%
+      filter(Keep=="keep") %>% select(-Keep)%>%
+      #select(ID_Analyte,IsotopeLabelType,ID_FragmentIon_charge,ID_Rep,InterpolatedTimes,
+      #       InterpolatedIntensities,InterpolatedMassErrors,Area,LibraryIntensity,MinStartTime,MaxEndTime)%>%
+      arrange(ID_Analyte,ID_FragmentIon_charge,ID_Rep)
+  }
+  
+  return(D1)}
 data_loader_from_PartitionedParquet<-function(D){
   # Loading the data
-
+  
   
   Chrom.Analyte = D %>% distinct()
- 
+  
   
   ### Boundaries
   Boundaries<-tapply(paste(Chrom.Analyte$ID_FragmentIon_charge,Chrom.Analyte$MinStartTime,Chrom.Analyte$MaxEndTime,Chrom.Analyte$InterpolatedTimes,sep=','), paste0("Rep_",Chrom.Analyte$ID_Rep," Analyte_",Chrom.Analyte$ID_Analyte," IsotopeLabelType_",Chrom.Analyte$IsotopeLabelType), function(x){
@@ -71,16 +138,16 @@ data_loader_from_PartitionedParquet<-function(D){
                      paste0("Rep_",Chrom.Analyte$ID_Rep," Analyte_",
                             Chrom.Analyte$ID_Analyte," IsotopeLabelType_",Chrom.Analyte$IsotopeLabelType),
                      function(x){
-    m=strsplit(x, ',') %>% unlist() %>% gsub(pattern=' *', replacement='') %>% matrix(nrow=length(x), byrow=T)
-    m=t(m)
-    
-    colnames(m) <- m[1,]
-    m=m[-1,]
-    m= apply(m,2,as.numeric) 
-    
-    row.names(m) <- paste('Point', 1:nrow(m), sep='.')
-    m
-  })
+                       m=strsplit(x, ',') %>% unlist() %>% gsub(pattern=' *', replacement='') %>% matrix(nrow=length(x), byrow=T)
+                       m=t(m)
+                       
+                       colnames(m) <- m[1,]
+                       m=m[-1,]
+                       m= apply(m,2,as.numeric) 
+                       
+                       row.names(m) <- paste('Point', 1:nrow(m), sep='.')
+                       m
+                     })
   
   Chrom_Full<-rapply( Chrom_Full, f=function(x) ifelse(is.nan(x),0,x), how="replace" )
   Chrom_Full<-rapply( Chrom_Full, f=function(x) ifelse((x)<0,0,x), how="replace" )
@@ -480,10 +547,10 @@ AvantGardeDIA_GlobalRefinement_modif<-function(D){
   
   ########### Running the tools
   Results_TransitionRefinementTool<-Run_Transition_Refinment_Tool_modif(Chrom.Analyte = Chrom.Analyte,
-                                                                  Norm.Chrom = Norm.Chrom,
-                                                                  MassErrors = MassErrors,
-                                                                  Transition.Area = Transition.Area,
-                                                                  Transition.Rank = Transition.Rank)
+                                                                        Norm.Chrom = Norm.Chrom,
+                                                                        MassErrors = MassErrors,
+                                                                        Transition.Area = Transition.Area,
+                                                                        Transition.Rank = Transition.Rank)
   TransitionRefinementSolution<-unique(Results_TransitionRefinementTool$Report.Transition.Values$ID_FragmentIon_charge)
   
   Results_PeakBoundaries_tool<-Run_PeakBoundaries_tool(Chrom_Full,MassErrors_Full,TransitionRefinementSolution,Boundaries)
@@ -501,6 +568,17 @@ AvantGardeDIA_GlobalRefinement_modif<-function(D){
               ColNames_Report=ColNames_Report))
   
 }
+
+
+source(params_file)
+
+data= fread(file=analyte_data,
+            header =T, stringsAsFactors = F)
+names(data)<-gsub(names(data),pattern = "\\.",replacement = "")
+names(data)<-gsub(names(data),pattern = " ",replacement = "")
+
+data <- data %>% filter(!is.na(LibraryIntensity))
+data <- Filter_Na_Shared_Or_LowMassTransitions(data)
 
 i = analyte_hash_id
 A<-AvantGardeDIA_GlobalRefinement_modif(data)
