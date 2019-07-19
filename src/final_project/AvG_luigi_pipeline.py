@@ -37,8 +37,11 @@ class ConvertCSVToParquet(luigi.Task):
     def output(self):
         # salted graph using the parameters used for the R script and the name of the initial csv file
         params_tag = hash_params_file(self.input()['params_file'].path)
-        csv_file_tag = SaltString.get_hash_of_file(self.input()['inputcsv'].path)
-        hex_tag = hash_value(csv_file_tag + params_tag)
+        # csv_file_tag = SaltString.get_hash_of_file(self.input()['inputcsv'].path)
+        # hex_tag = hash_value(csv_file_tag + params_tag)
+
+        hex_tag = hash_value(params_tag)
+
         return luigi.LocalTarget("data/AvantGardeDIA_Export_%s.parquet" % hex_tag)
 
     def run(self):
@@ -55,7 +58,8 @@ class ReadHashIndexAndPartitionParquetFile(luigi.Task):
     def requires(self):
         return ConvertCSVToParquet()
     def output(self):
-        hex_tag = SaltString.get_hash_of_file(self.input().path)
+        # hex_tag = SaltString.get_hash_of_file(self.input().path)
+        hex_tag="hi"
         return luigi.LocalTarget(self.csv_ds_root_path+'ID_Analyte_glossary'+"_%s.csv" % hex_tag)
     def run(self):
         read_hashindex_and_partition_parquetFile(input_path=self.input().path,
@@ -73,7 +77,8 @@ class TransformParquetPartitionsToCSV(luigi.Task):
     def requires(self):
         return ReadHashIndexAndPartitionParquetFile()
     def output(self):
-        hex_tag = SaltString.get_hash_of_file(self.input().path)
+        # hex_tag = SaltString.get_hash_of_file(self.input().path)
+        hex_tag = "hi"
         return luigi.LocalTarget(self.csv_ds_root_path+'ID_Analyte_glossary_2'+"_%s.csv" % hex_tag)
     def run(self):
         parquet_partitions_to_csvs(id_analyte_path=self.input().path,

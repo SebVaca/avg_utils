@@ -65,7 +65,7 @@ def convert_csv_to_parquet_by_chunks(input_csv_path, parquet_file_path, chunksiz
         # Write CSV chunk to the parquet file
         table = pa.Table.from_pandas(chunk, schema=parquet_schema)
         parquet_writer.write_table(table)
-        parquet_writer.close()
+    parquet_writer.close()
 
 
 def read_hashindex_and_partition_parquetFile(input_path, rootpath, csv_ds_root_path, id_analyte_path):

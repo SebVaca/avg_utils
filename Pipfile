@@ -11,8 +11,9 @@ pytest-cov = "*"
 final_project = {editable = true,path = "."}
 # pset-utils = {editable = true,git = "https://github.com/csci-e-29/2019sp-pset-utils-SebVaca"}
 luigi = "*"
-pyarrow = "*"
+pyarrow = "==0.14.*"
 pandas = "*"
+cython = "*"
 
 [requires]
 python_version = "3.7"
