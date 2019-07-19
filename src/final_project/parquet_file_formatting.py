@@ -106,7 +106,7 @@ def read_hashindex_and_partition_parquetFile(input_path, rootpath, csv_ds_root_p
     df_ID_FragmentIon_charge.to_csv(csv_ds_root_path + "ID_FragmentIon_charge.csv", index=False)
 
     df_ID_Rep = df[['ID_Rep', 'File Name']].drop_duplicates()
-    df_ID_Rep.to_csv(csv_ds_root_path + "ID_Rep.csv", index=False)
+    df_ID_Rep.to_csv(csv_ds_root_path + "ID_Rep.csv", index=False, header=True)
 
     df_transition_locator = df[['Transition Locator', 'ID_FragmentIon_charge', 'ID_Analyte']].drop_duplicates()
     df_transition_locator.to_csv(csv_ds_root_path + "ID_transition_locator.csv", index=False)
@@ -151,6 +151,53 @@ def read_by_rowgroup_hashindex_and_partition_parquetFile(input_path, rootpath, c
         pq.write_to_dataset(table,
                             root_path=rootpath,
                             partition_cols=['ID_Analyte'])
+
+        # Create directory files to save the correspondance of the hash ids and the real values
+        def write_to_same_csv_appending(dt, j, path, filename=None):
+
+            if filename is not None:
+                path_file = path + filename
+            else:
+                path_file = path
+
+            if j == 0:
+                dt.to_csv(path_file,
+                          index=False,
+                          header=True)
+            else:
+                dt.to_csv(path_file,
+                          mode='a',
+                          index=False,
+                          header=False)
+
+        df_ID_FragmentIon_charge = df[['ID_FragmentIon_charge',
+                                       'Fragment Ion',
+                                       'Product Charge']].drop_duplicates()
+        write_to_same_csv_appending(df_ID_FragmentIon_charge, i, csv_ds_root_path, "ID_FragmentIon_charge.csv")
+
+
+        df_ID_Rep = df[['ID_Rep', 'File Name']].drop_duplicates()
+        write_to_same_csv_appending(df_ID_Rep, i, csv_ds_root_path, "ID_Rep.csv")
+
+        df_transition_locator = df[['Transition Locator', 'ID_FragmentIon_charge', 'ID_Analyte']].drop_duplicates()
+        write_to_same_csv_appending(df_transition_locator, i, csv_ds_root_path, "ID_transition_locator.csv")
+
+        df_ID_Analyte = df[['ID_Analyte',
+                            'Protein Name',
+                            'Peptide Modified Sequence',
+                            'Precursor Charge',
+                            'Is Decoy']].drop_duplicates()
+        write_to_same_csv_appending(df_ID_Analyte, i, id_analyte_path)
+
+    # read, drop duplicates and write file again
+    def read_drop_duplicates_rewrite(path):
+        pd.read_csv(path).drop_duplicates().to_csv(path, index=False, header=True)
+
+    read_drop_duplicates_rewrite(csv_ds_root_path + "ID_FragmentIon_charge.csv")
+    read_drop_duplicates_rewrite(csv_ds_root_path + "ID_Rep.csv")
+    read_drop_duplicates_rewrite(csv_ds_root_path + "ID_transition_locator.csv")
+    read_drop_duplicates_rewrite(id_analyte_path)
+
 
 
 def read_only_one_partition_and_write_csv(parquet_dataset_dirpath, output_dirpath, ID_analyte):
