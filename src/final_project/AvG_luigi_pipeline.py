@@ -47,7 +47,7 @@ class ConvertCSVToParquet(luigi.Task):
     def run(self):
         convert_csv_to_parquet_by_chunks(input_csv_path=self.input()['inputcsv'].path,
                                          parquet_file_path=self.output().path,
-                                         chunksize=20000)
+                                         chunksize=2000)
 
 
 class ReadHashIndexAndPartitionParquetFile(luigi.Task):

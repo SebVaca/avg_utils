@@ -119,6 +119,40 @@ def read_hashindex_and_partition_parquetFile(input_path, rootpath, csv_ds_root_p
     df_ID_Analyte.to_csv(id_analyte_path, index=False)
 
 
+def read_by_rowgroup_hashindex_and_partition_parquetFile(input_path, rootpath, csv_ds_root_path, id_analyte_path):
+    """ Read the parquet file, create the hashed index for each analyte and create teh partitions
+        :param str input_path: path to the parquet file
+        :param str rootpath: path to the parquet dataset folder
+        :param str csv_ds_root_path: path to the folder of temporary csv files
+        :param str id_analyte_path: output path of the 'ID_Analyte_glossary' file. This file contains the values of all
+        hashed ids and it is used as the _SUCCESS file
+
+        :returns: parquet dataset partitioned by the hashed id of the analyte (ID_Analyte), creates the
+        'ID_Analyte_glossary' file.
+
+        """
+    f = pq.ParquetFile(source=input_path)
+    for i in range(f.num_row_groups):
+        df = f.read_row_group(i).to_pandas()
+
+        # Concatenate values from multiple columns to create a unique identifier for each
+        # Analyte, transition (signal) and MS acquisition (Mass spectrometry analysis)
+
+        df['ID_Analyte'] = df['Protein Name'].astype(str) + '_' + df['Peptide Modified Sequence'].astype(str) + '_' + \
+                           df['Precursor Charge'].astype(str) + df['Is Decoy'].astype(str)
+        df['ID_FragmentIon_charge'] = df['Fragment Ion'].astype(str) + '_' + df['Product Charge'].astype(str)
+
+        # Hashed the values to obtain the unique identifier
+        df['ID_Analyte'] = df['ID_Analyte'].map(lambda x: hash_value(x))
+        df['ID_FragmentIon_charge'] = df['ID_FragmentIon_charge'].map(lambda x: hash_value(x))
+        df['ID_Rep'] = df['File Name'].astype(str).map(lambda x: hash_value(x))
+
+        table = pa.Table.from_pandas(df)
+        pq.write_to_dataset(table,
+                            root_path=rootpath,
+                            partition_cols=['ID_Analyte'])
+
+
 def read_only_one_partition_and_write_csv(parquet_dataset_dirpath, output_dirpath, ID_analyte):
     """ Read the parquet file, create the hashed index for each analyte and create teh partitions
         :param str parquet_dataset_dirpath: path to the parquet dataset folder
