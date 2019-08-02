@@ -7,6 +7,7 @@ import pyarrow.parquet as pq
 import os
 from .luigi_avg_rtask_utils import run_r_script_for_an_analyte, run_r_script_for_all_analytes
 from .parquet_file_formatting import read_hashindex_and_partition_parquetFile, convert_csv_to_parquet_by_chunks
+from .parquet_file_formatting import read_by_rowgroup_hashindex_and_partition_parquetFile
 from .parquet_file_formatting import parquet_partitions_to_csvs, SaltString, hash_params_file, hash_value
 
 
@@ -37,14 +38,17 @@ class ConvertCSVToParquet(luigi.Task):
     def output(self):
         # salted graph using the parameters used for the R script and the name of the initial csv file
         params_tag = hash_params_file(self.input()['params_file'].path)
-        csv_file_tag = SaltString.get_hash_of_file(self.input()['inputcsv'].path)
-        hex_tag = hash_value(csv_file_tag + params_tag)
+        # csv_file_tag = SaltString.get_hash_of_file(self.input()['inputcsv'].path)
+        # hex_tag = hash_value(csv_file_tag + params_tag)
+
+        hex_tag = hash_value(params_tag)
+
         return luigi.LocalTarget("data/AvantGardeDIA_Export_%s.parquet" % hex_tag)
 
     def run(self):
         convert_csv_to_parquet_by_chunks(input_csv_path=self.input()['inputcsv'].path,
                                          parquet_file_path=self.output().path,
-                                         chunksize=20000)
+                                         chunksize=2000)
 
 
 class ReadHashIndexAndPartitionParquetFile(luigi.Task):
@@ -55,13 +59,18 @@ class ReadHashIndexAndPartitionParquetFile(luigi.Task):
     def requires(self):
         return ConvertCSVToParquet()
     def output(self):
-        hex_tag = SaltString.get_hash_of_file(self.input().path)
+        # hex_tag = SaltString.get_hash_of_file(self.input().path)
+        hex_tag="hi"
         return luigi.LocalTarget(self.csv_ds_root_path+'ID_Analyte_glossary'+"_%s.csv" % hex_tag)
     def run(self):
-        read_hashindex_and_partition_parquetFile(input_path=self.input().path,
-                                                 rootpath=self.root_path,
-                                                 csv_ds_root_path=self.csv_ds_root_path,
-                                                 id_analyte_path=self.output().path)
+        # read_hashindex_and_partition_parquetFile(input_path=self.input().path,
+        #                                          rootpath=self.root_path,
+        #                                          csv_ds_root_path=self.csv_ds_root_path,
+        #                                          id_analyte_path=self.output().path)
+        read_by_rowgroup_hashindex_and_partition_parquetFile(input_path=self.input().path,
+                                                             rootpath=self.root_path,
+                                                             csv_ds_root_path=self.csv_ds_root_path,
+                                                             id_analyte_path=self.output().path)
 
 
 class TransformParquetPartitionsToCSV(luigi.Task):
@@ -73,7 +82,8 @@ class TransformParquetPartitionsToCSV(luigi.Task):
     def requires(self):
         return ReadHashIndexAndPartitionParquetFile()
     def output(self):
-        hex_tag = SaltString.get_hash_of_file(self.input().path)
+        # hex_tag = SaltString.get_hash_of_file(self.input().path)
+        hex_tag = "hi"
         return luigi.LocalTarget(self.csv_ds_root_path+'ID_Analyte_glossary_2'+"_%s.csv" % hex_tag)
     def run(self):
         parquet_partitions_to_csvs(id_analyte_path=self.input().path,
