@@ -3,6 +3,8 @@ import csv
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+import string
+
 
 def hash_str(some_val, salt=''):
     """Converts strings to hash digest
@@ -247,3 +249,70 @@ class SaltString():
             return hasher.hexdigest()[:8]
         except:
             print("file not yet created")
+
+
+
+def read_csv_by_chunks_createindices_and_partitionPQbygroup(input_csv_path, parquet_file_path, chunksize, n_parts):
+    """ convert csv to parquet by chunks
+        :param str input_csv_path: path to the csv file
+        :param str parquet_file_path: path to the output parquet file
+        :param int chunksize: size of the chunk to read
+        :param int n_parts: number of partitions
+
+        :returns: parquet file
+
+        """
+    csv_stream = pd.read_csv(input_csv_path,
+                             sep=',',
+                             chunksize=chunksize,
+                             low_memory=False)
+
+    for i, chunk in enumerate(csv_stream):
+        print("Chunk", i)
+        df_annotated = create_indices(chunk, n_parts)
+        table = pa.Table.from_pandas(df=df_annotated)
+        pq.write_to_dataset(table,
+                            root_path=rootpath,
+                            partition_cols=['ID_group', 'ID_Analyte'])
+
+
+
+def create_indices(pandas_df, n_parts):
+
+    df = pandas_df
+    # Concatenate values from multiple columns to create a unique identifier for each
+    # Analyte, transition (signal) and MS acquisition (Mass spectrometry analysis)
+
+    df['ID_Analyte'] = df['Protein Name'].astype(str) + '_' + df['Peptide Modified Sequence'].astype(str) + '_' + \
+                       df['Precursor Charge'].astype(str) + df['Is Decoy'].astype(str)
+    df['ID_FragmentIon_charge'] = df['Fragment Ion'].astype(str) + '_' + df['Product Charge'].astype(str)
+
+    # Hashed the values to obtain the unique identifier
+    df['ID_Analyte'] = df['ID_Analyte'].map(lambda x: hash_value(x))
+    df['ID_FragmentIon_charge'] = df['ID_FragmentIon_charge'].map(lambda x: hash_value(x))
+    df['ID_Rep'] = df['File Name'].astype(str).map(lambda x: hash_value(x))
+
+    # obtain dictionary of groups from first two characters of the hash value of the ID_analyte
+    combs_dict = hashvalue_to_groupnumber_dictionary(n_parts)
+
+    df['ID_group'] = df['ID_Analyte'].map(lambda x: str(x[0:2]))
+    df['ID_group'] = df['ID_group'].map(combs_dict)
+    return df
+
+
+def hashvalue_to_groupnumber_dictionary(n_parts):
+
+    # list of all characters used in sha 256.
+    alphanum = string.ascii_lowercase[0:6] + string.digits
+
+    # all possible combinations of two characters
+    combs = [val1 + val2 for val1 in alphanum for val2 in alphanum]
+
+    combs_df = pd.DataFrame(combs, columns=['combs'])
+    combs_df['number'] = combs_df.index
+    combs_df['cat'] = pd.cut(combs_df['number'], n_parts)
+    combs_df['group'] = pd.factorize(combs_df['cat'])[0] + 1
+    combs_df2 = combs_df[['combs', 'group']]
+    combs_dict = dict(zip(combs_df2.combs, combs_df2.group))
+
+    return combs_dict
