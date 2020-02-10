@@ -4,6 +4,8 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import string
+import os
+import zipfile
 
 
 def hash_str(some_val, salt=''):
@@ -252,10 +254,14 @@ class SaltString():
 
 
 
-def read_csv_by_chunks_createindices_and_partitionPQbygroup(input_csv_path, parquet_file_path, chunksize, n_parts):
+def read_csv_by_chunks_createindices_and_partitionPQbygroup(input_csv_path,
+                                                            parquet_dataset_output_path,
+                                                            indices_csv_output_path,
+                                                            chunksize,
+                                                            n_parts):
     """ convert csv to parquet by chunks
         :param str input_csv_path: path to the csv file
-        :param str parquet_file_path: path to the output parquet file
+        :param str parquet_dataset_path: path to the output parquet file
         :param int chunksize: size of the chunk to read
         :param int n_parts: number of partitions
 
@@ -272,9 +278,64 @@ def read_csv_by_chunks_createindices_and_partitionPQbygroup(input_csv_path, parq
         df_annotated = create_indices(chunk, n_parts)
         table = pa.Table.from_pandas(df=df_annotated)
         pq.write_to_dataset(table,
-                            root_path=rootpath,
+                            root_path=parquet_dataset_output_path,
                             partition_cols=['ID_group', 'ID_Analyte'])
 
+        df = df_annotated
+
+        # Create directory files to save the correspondance of the hash ids and the real values
+        def write_to_same_csv_appending(dt, j, path, filename=None):
+
+            if filename is not None:
+                path_file = path + filename
+            else:
+                path_file = path
+
+            if j == 0:
+                dt.to_csv(path_file,
+                          index=False,
+                          header=True)
+            else:
+                dt.to_csv(path_file,
+                          mode='a',
+                          index=False,
+                          header=False)
+
+        df_ID_FragmentIon_charge = df[['ID_FragmentIon_charge',
+                                       'Fragment Ion',
+                                       'Product Charge']].drop_duplicates()
+        write_to_same_csv_appending(df_ID_FragmentIon_charge, i, indices_csv_output_path, "ID_FragmentIon_charge.csv")
+
+        df_ID_Rep = df[['ID_Rep', 'File Name']].drop_duplicates()
+        write_to_same_csv_appending(df_ID_Rep, i, indices_csv_output_path, "ID_Rep.csv")
+
+        df_transition_locator = df[['Transition Locator', 'ID_FragmentIon_charge', 'ID_Analyte']].drop_duplicates()
+        write_to_same_csv_appending(df_transition_locator, i, indices_csv_output_path, "ID_transition_locator.csv")
+
+        df_ID_Analyte = df[['ID_Analyte',
+                            'Protein Name',
+                            'Peptide Modified Sequence',
+                            'Precursor Charge',
+                            'Is Decoy']].drop_duplicates()
+        write_to_same_csv_appending(df_ID_Analyte, i, indices_csv_output_path, "ID_Analyte.csv")
+
+        df_ID_Analyte_withgroup = df[['ID_Analyte',
+                            'Protein Name',
+                            'Peptide Modified Sequence',
+                            'Precursor Charge',
+                            'Is Decoy',
+                            'ID_group']].drop_duplicates()
+        write_to_same_csv_appending(df_ID_Analyte_withgroup, i, indices_csv_output_path, "ID_Analyte_withgroup.csv")
+
+    # read, drop duplicates and write file again
+    def read_drop_duplicates_rewrite(path):
+        pd.read_csv(path).drop_duplicates().to_csv(path, index=False, header=True)
+
+    read_drop_duplicates_rewrite(indices_csv_output_path + "ID_FragmentIon_charge.csv")
+    read_drop_duplicates_rewrite(indices_csv_output_path + "ID_Rep.csv")
+    read_drop_duplicates_rewrite(indices_csv_output_path + "ID_transition_locator.csv")
+    read_drop_duplicates_rewrite(indices_csv_output_path + "ID_Analyte.csv")
+    read_drop_duplicates_rewrite(indices_csv_output_path + "ID_Analyte_withgroup.csv")
 
 
 def create_indices(pandas_df, n_parts):
@@ -316,3 +377,62 @@ def hashvalue_to_groupnumber_dictionary(n_parts):
     combs_dict = dict(zip(combs_df2.combs, combs_df2.group))
 
     return combs_dict
+
+
+def zip_dir_keeping_folder_structure(directory, zipname):
+    """ Compress a directory (ZIP file).
+        :param str directory: path to the directory to zip (e.g '/path/to/folder/')
+        :param str zipname: path to the output zip file (e.g. '/path/to/zipfile.zip')
+    """
+    print(os.path.exists(directory))
+    if os.path.exists(directory):
+        outZipFile = zipfile.ZipFile(zipname, 'w', zipfile.ZIP_DEFLATED)
+
+        # The root directory within the ZIP file.
+        rootdir = os.path.basename(directory)
+
+        for dirpath, dirnames, filenames in os.walk(directory):
+            for filename in filenames:
+
+                # Write the file named filename to the archive,
+                # giving it the archive name 'arcname'.
+                filepath   = os.path.join(dirpath, filename)
+                parentpath = os.path.relpath(filepath, directory)
+                arcname    = os.path.join(rootdir, parentpath)
+
+                outZipFile.write(filepath, arcname)
+
+    outZipFile.close()
+
+
+def zip_ParquetPartitions_individually(parquet_dataset_path,
+                                               zip_outputs):
+    """ zips top-level parquet dataset partition individually
+        :param str parquet_dataset_path: path to the parquet dataset (e.g '/path/to/PQ_dataset/')
+        :param str zip_outputs: path to the folder which will containt the zip files (e.g. '/path/to/folder/')
+    """
+    #dirs = [d for d in os.listdir(reports_path) if os.path.isdir(os.path.join(reports_path, d))]
+    dirs = [os.path.join(parquet_dataset_path, d) for d in os.listdir(parquet_dataset_path) if
+            os.path.isdir(os.path.join(parquet_dataset_path, d))]
+    for d in dirs:
+        file_path = os.path.join(zip_outputs, os.path.basename(d) + '.zip')
+        file_path = os.path.abspath(os.path.normpath(os.path.expanduser(file_path)))
+        d = os.path.abspath(os.path.normpath(os.path.expanduser(d)))
+
+        print('Compressing folder : ' + d)
+        zip_dir_keeping_folder_structure(d, file_path)
+        print('Created zip file to: ' + file_path)
+
+
+def unzip_ParquetPartition_keepingDatasetstructure(zip_filepath, zip_output_path):
+    """ unzips the zip file containing one partition of the parquet dataset and keeps the dataset structure
+        :param str zip_filepath: path to the zip file to unzip (e.g '/path/to/zipfile.zip')
+        :param str zip_output_path: path to the output zip file (e.g. '/path/to/output/')
+    """
+    # a = os.path.basename('C:/Users/svaca/Desktop/Temps/PQ_partition_develop/zip_files/ID_group=9.zip')
+    # a = os.path.splitext(a)[0]
+
+    # Create a ZipFile Object and load sample.zip in it
+    with zipfile.ZipFile(zip_filepath, 'r') as zipObj:
+       # Extract all the contents of zip file in different directory
+       zipObj.extractall(zip_output_path)
