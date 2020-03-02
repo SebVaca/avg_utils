@@ -25,7 +25,7 @@ def read(*names, **kwargs):
 
 
 setup(
-    name='final-project',
+    name='avg_utils',
     version='0.0.0',
     license='BSD 2-Clause License',
     description='A package generated with cookiecutter-pylibrary during the Harvard Extension School.',

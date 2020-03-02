@@ -287,7 +287,7 @@ def read_csv_by_chunks_createindices_and_partitionPQbygroup(input_csv_path,
         def write_to_same_csv_appending(dt, j, path, filename=None):
 
             if filename is not None:
-                path_file = path + filename
+                path_file = os.path.join(path, filename)
             else:
                 path_file = path
 
@@ -331,11 +331,11 @@ def read_csv_by_chunks_createindices_and_partitionPQbygroup(input_csv_path,
     def read_drop_duplicates_rewrite(path):
         pd.read_csv(path).drop_duplicates().to_csv(path, index=False, header=True)
 
-    read_drop_duplicates_rewrite(indices_csv_output_path + "ID_FragmentIon_charge.csv")
-    read_drop_duplicates_rewrite(indices_csv_output_path + "ID_Rep.csv")
-    read_drop_duplicates_rewrite(indices_csv_output_path + "ID_transition_locator.csv")
-    read_drop_duplicates_rewrite(indices_csv_output_path + "ID_Analyte.csv")
-    read_drop_duplicates_rewrite(indices_csv_output_path + "ID_Analyte_withgroup.csv")
+    read_drop_duplicates_rewrite(os.path.join(indices_csv_output_path, "ID_FragmentIon_charge.csv"))
+    read_drop_duplicates_rewrite(os.path.join(indices_csv_output_path, "ID_Rep.csv"))
+    read_drop_duplicates_rewrite(os.path.join(indices_csv_output_path, "ID_transition_locator.csv"))
+    read_drop_duplicates_rewrite(os.path.join(indices_csv_output_path, "ID_Analyte.csv"))
+    read_drop_duplicates_rewrite(os.path.join(indices_csv_output_path, "ID_Analyte_withgroup.csv"))
 
 
 def create_indices(pandas_df, n_parts):
