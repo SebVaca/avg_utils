@@ -77,8 +77,8 @@ class ConvertCSVToZippedParquetDataset(luigi.Task):
             input_csv_path=self.input()['inputcsv'].path,
             parquet_dataset_output_path=pq_dataset_path,
             indices_csv_output_path=indices_glossary_path,
-            chunksize=1000,
-            n_parts=10)
+            chunksize=4000,
+            n_parts=6)
 
         zip_ParquetPartitions_individually(
             parquet_dataset_path=pq_dataset_path,

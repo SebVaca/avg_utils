@@ -436,3 +436,31 @@ def unzip_ParquetPartition_keepingDatasetstructure(zip_filepath, zip_output_path
     with zipfile.ZipFile(zip_filepath, 'r') as zipObj:
        # Extract all the contents of zip file in different directory
        zipObj.extractall(zip_output_path)
+
+def create_path_of_PQpartition(path):
+    """ unzips the zip file containing one partition of the parquet dataset and keeps the dataset structure
+        :param str zip_filepath: path to the zip file to unzip (e.g '/path/to/zipfile.zip')
+        :param str zip_output_path: path to the output zip file (e.g. '/path/to/output/')
+    """
+    a = os.listdir(path)[0]
+    b = os.path.join(path, a)
+
+    return b
+
+def parquet_to_csvs_from_one_partition(path_PQ_partition_byGroup, parquet_dataset_dirpath,output_dirpath):
+    """ Converts each partition to a csv file
+        :param str id_analyte_path:  path to the 'ID_Analyte_glossary' file. This file contains the values of all
+        hashed ids and it is also used as the _SUCCESS file
+        :param str parquet_dataset_dirpath: path to the parquet dataset folder
+        :param str output_dirpath: path to folder where the csv files will be written
+        :param str ID_analyte: hashed id of the analyte for which the partition will be read
+
+        :returns: writes a csv file for every analyte
+
+        """
+    dd = [w.replace('ID_Analyte=', '') for w in os.listdir(path_PQ_partition_byGroup)]
+    dd = pd.DataFrame(dd, columns=['ID_Analyte'])
+    dd['ID_Analyte'].map(lambda x: read_only_one_partition_and_write_csv(
+        parquet_dataset_dirpath=parquet_dataset_dirpath,
+        output_dirpath=output_dirpath,
+        ID_analyte=x))
