@@ -216,8 +216,7 @@ def read_only_one_partition_and_write_csv(parquet_dataset_dirpath, output_dirpat
     dataset = pq.ParquetDataset(parquet_dataset_dirpath,
                                 filters=[('ID_Analyte', '=', str(ID_analyte)), ])
     df = dataset.read().to_pandas()
-    df.to_csv(output_dirpath+'data_analyte_'+ID_analyte+'.csv', index=False)
-
+	df.to_csv(os.path.join(output_dirpath,'data_analyte_'+ID_analyte+'.csv'), index=False)
 
 def parquet_partitions_to_csvs(id_analyte_path, parquet_dataset_dirpath,output_dirpath):
     """ Converts each partition to a csv file
