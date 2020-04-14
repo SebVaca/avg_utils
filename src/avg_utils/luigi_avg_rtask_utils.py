@@ -16,16 +16,15 @@ def generate_subprocess_call_for_a_analyte(hashed_id, csv_ds_root_path, params_f
 
         """
 
-    R_SCRIPT_PATH = os.getenv('R_SCRIPT_PATH')
-    local_path = os.getenv('local_path')
+    R_SCRIPT_PATH = "Rscript"
 
     subprocess_call_for_r_script = str(
         R_SCRIPT_PATH +
-        ' "' + local_path + 'src/AvG_R_scripts/AvG_from_partitionedParquet.R' + '" ' +
-        ' "' + local_path + csv_ds_root_path + 'data_analyte_' + str(hashed_id) + '.csv' + '" ' +
+        ' "/usr/local/src/AvG_for_Terra.R" ' +
+        ' "' + os.path.join(csv_ds_root_path, 'data_analyte_' + str(hashed_id) + '.csv') + '" ' +
         ' "' + str(params_file_path) + '" ' +
         ' "' + str(hashed_id) + '" ' +
-        ' "' + local_path + output_dir + '" ')
+        ' "' + str(output_dir) + '" ')
 
     return subprocess_call_for_r_script
 
@@ -45,11 +44,11 @@ def run_r_script_for_an_analyte(hashed_id, csv_ds_root_path, params_file_path, o
     subprocess_call_for_r_script = generate_subprocess_call_for_a_analyte(
         hashed_id, csv_ds_root_path, params_file_path, output_dir)
 
-    # print('subcall:' + subprocess_call_for_r_script)
+    #print('subcall:' + subprocess_call_for_r_script)
 
     subprocess.call(subprocess_call_for_r_script, shell=True)
 
-def run_r_script_for_all_analytes(id_analyte_path,csv_ds_root_path, params_file_path, output_dir):
+def run_r_script_for_all_analytes(csv_ds_root_path, params_file_path, output_dir):
     """ Run the avant-garde R script for all analytes. Reads the 'ID_Analyte_glossary' file, that contains all
     hashed id values for all the analytes and iterates through it.
 
@@ -62,7 +61,9 @@ def run_r_script_for_all_analytes(id_analyte_path,csv_ds_root_path, params_file_
         to be written in R to make sure that the script ran without errors.
 
         """
-    dd = pd.read_csv(id_analyte_path)
+    dd = [w.replace('data_analyte_', '') for w in os.listdir(csv_ds_root_path)]
+    dd = [w.replace('.csv', '') for w in dd]
+    dd = pd.DataFrame(dd, columns=['ID_Analyte'])
     dd['ID_Analyte'].map(lambda x: run_r_script_for_an_analyte(
         hashed_id=x,
         csv_ds_root_path=csv_ds_root_path,
