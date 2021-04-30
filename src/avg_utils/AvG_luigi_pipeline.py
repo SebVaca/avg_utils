@@ -157,6 +157,8 @@ class RTask_Report(luigi.Task):
             ' "' + self.local_path + input_path + '" ' +
             ' "' + self.local_path + self.csv_ds_root_path + 'ID_transition_locator.csv' + '" ' +
             ' "' + self.local_path + self.csv_ds_root_path + 'ID_Rep.csv' + '" ' +
+            # new
+            ' "' + self.local_path + self.csv_ds_root_path + 'MetaData_PrecursorResults.csv' + '" ' +
             ' "' + self.local_path + self.final_results_dir + '" ' +
             ' "' + self.local_path + self.output().path + '" ')
         print(subprocess_call_for_r_script)

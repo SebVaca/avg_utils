@@ -185,6 +185,15 @@ def read_by_rowgroup_hashindex_and_partition_parquetFile(input_path, rootpath, c
 
         df_transition_locator = df[['Transition Locator', 'ID_FragmentIon_charge', 'ID_Analyte']].drop_duplicates()
         write_to_same_csv_appending(df_transition_locator, i, csv_ds_root_path, "ID_transition_locator.csv")
+        # new
+        df_ID_PrecursorResult = df[['Precursor Result Locator',
+                            'Protein Name',
+                            'Peptide Modified Sequence',
+                            'Isotope Label Type',
+                            'Precursor Charge',
+                            'Is Decoy',
+                            'File Name']].drop_duplicates()
+        write_to_same_csv_appending(df_ID_PrecursorResult, i, csv_ds_root_path, "MetaData_PrecursorResults.csv")
 
         df_ID_Analyte = df[['ID_Analyte',
                             'Protein Name',
@@ -200,6 +209,8 @@ def read_by_rowgroup_hashindex_and_partition_parquetFile(input_path, rootpath, c
     read_drop_duplicates_rewrite(csv_ds_root_path + "ID_FragmentIon_charge.csv")
     read_drop_duplicates_rewrite(csv_ds_root_path + "ID_Rep.csv")
     read_drop_duplicates_rewrite(csv_ds_root_path + "ID_transition_locator.csv")
+    # new
+    read_drop_duplicates_rewrite(csv_ds_root_path + "MetaData_PrecursorResults.csv")
     read_drop_duplicates_rewrite(id_analyte_path)
 
 
@@ -216,7 +227,9 @@ def read_only_one_partition_and_write_csv(parquet_dataset_dirpath, output_dirpat
     dataset = pq.ParquetDataset(parquet_dataset_dirpath,
                                 filters=[('ID_Analyte', '=', str(ID_analyte)), ])
     df = dataset.read().to_pandas()
-	df.to_csv(os.path.join(output_dirpath,'data_analyte_'+ID_analyte+'.csv'), index=False)
+    # df.to_csv(output_dirpath+'data_analyte_'+ID_analyte+'.csv', index=False)
+    df.to_csv(os.path.join(output_dirpath, 'data_analyte_'+ID_analyte+'.csv'), index=False)
+
 
 def parquet_partitions_to_csvs(id_analyte_path, parquet_dataset_dirpath,output_dirpath):
     """ Converts each partition to a csv file
@@ -238,7 +251,7 @@ def parquet_partitions_to_csvs(id_analyte_path, parquet_dataset_dirpath,output_d
 
 class SaltString():
     """ calculates a hash string from the name of a file
-  
+
         """
     @staticmethod
     def get_hash_of_file(filename):
@@ -326,6 +339,16 @@ def read_csv_by_chunks_createindices_and_partitionPQbygroup(input_csv_path,
                             'ID_group']].drop_duplicates()
         write_to_same_csv_appending(df_ID_Analyte_withgroup, i, indices_csv_output_path, "ID_Analyte_withgroup.csv")
 
+        #new
+        df_ID_PrecursorResult = df[['Precursor Result Locator',
+                                    'Protein Name',
+                                    'Peptide Modified Sequence',
+                                    'Isotope Label Type',
+                                    'Precursor Charge',
+                                    'Is Decoy',
+                                    'File Name']].drop_duplicates()
+        write_to_same_csv_appending(df_ID_PrecursorResult, i, csv_ds_root_path, "MetaData_PrecursorResults.csv")
+
     # read, drop duplicates and write file again
     def read_drop_duplicates_rewrite(path):
         pd.read_csv(path).drop_duplicates().to_csv(path, index=False, header=True)
@@ -335,6 +358,8 @@ def read_csv_by_chunks_createindices_and_partitionPQbygroup(input_csv_path,
     read_drop_duplicates_rewrite(os.path.join(indices_csv_output_path, "ID_transition_locator.csv"))
     read_drop_duplicates_rewrite(os.path.join(indices_csv_output_path, "ID_Analyte.csv"))
     read_drop_duplicates_rewrite(os.path.join(indices_csv_output_path, "ID_Analyte_withgroup.csv"))
+    # new
+    read_drop_duplicates_rewrite(indices_csv_output_path, "MetaData_PrecursorResults.csv")
 
 
 def create_indices(pandas_df, n_parts):
