@@ -347,7 +347,7 @@ def read_csv_by_chunks_createindices_and_partitionPQbygroup(input_csv_path,
                                     'Precursor Charge',
                                     'Is Decoy',
                                     'File Name']].drop_duplicates()
-        write_to_same_csv_appending(df_ID_PrecursorResult, i, csv_ds_root_path, "MetaData_PrecursorResults.csv")
+        write_to_same_csv_appending(df_ID_PrecursorResult, i, indices_csv_output_path, "MetaData_PrecursorResults.csv")
 
     # read, drop duplicates and write file again
     def read_drop_duplicates_rewrite(path):
@@ -359,7 +359,7 @@ def read_csv_by_chunks_createindices_and_partitionPQbygroup(input_csv_path,
     read_drop_duplicates_rewrite(os.path.join(indices_csv_output_path, "ID_Analyte.csv"))
     read_drop_duplicates_rewrite(os.path.join(indices_csv_output_path, "ID_Analyte_withgroup.csv"))
     # new
-    read_drop_duplicates_rewrite(indices_csv_output_path, "MetaData_PrecursorResults.csv")
+    read_drop_duplicates_rewrite(os.path.join(indices_csv_output_path, "MetaData_PrecursorResults.csv"))
 
 
 def create_indices(pandas_df, n_parts):
