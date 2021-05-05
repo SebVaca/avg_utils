@@ -1,6 +1,7 @@
 import subprocess
 import pandas as pd
 import os
+import multiprocessing as mp
 
 
 def generate_subprocess_call_for_a_analyte(hashed_id, csv_ds_root_path, params_file_path, output_dir):
@@ -18,7 +19,7 @@ def generate_subprocess_call_for_a_analyte(hashed_id, csv_ds_root_path, params_f
 
     R_SCRIPT_PATH = os.getenv('R_SCRIPT_PATH')
     local_path = os.getenv('local_path')
-    
+
 
     subprocess_call_for_r_script = str(
         R_SCRIPT_PATH +
@@ -64,8 +65,15 @@ def run_r_script_for_all_analytes(id_analyte_path,csv_ds_root_path, params_file_
 
         """
     dd = pd.read_csv(id_analyte_path)
-    dd['ID_Analyte'].map(lambda x: run_r_script_for_an_analyte(
-        hashed_id=x,
-        csv_ds_root_path=csv_ds_root_path,
-        params_file_path=params_file_path,
-        output_dir=output_dir))
+    # dd['ID_Analyte'].map(lambda x: run_r_script_for_an_analyte(
+    #     hashed_id=x,
+    #     csv_ds_root_path=csv_ds_root_path,
+    #     params_file_path=params_file_path,
+    #     output_dir=output_dir))
+
+    pool = mp.Pool(mp.cpu_count())
+
+    num_analytes = len(dd['ID_Analyte'])
+    pool.starmap(run_r_script_for_an_analyte,
+                 [(str(dd['ID_Analyte'][i]), csv_ds_root_path, params_file_path, output_dir) for i in range(num_analytes)])
+

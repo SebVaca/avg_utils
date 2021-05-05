@@ -100,9 +100,10 @@ Filter_Na_Shared_Or_LowMassTransitions_modif<-function(D1){
       #select(ID_Analyte,IsotopeLabelType,ID_FragmentIon_charge,ID_Rep,InterpolatedTimes,
       #       InterpolatedIntensities,InterpolatedMassErrors,Area,LibraryIntensity,MinStartTime,MaxEndTime)%>%
       arrange(ID_Analyte,ID_FragmentIon_charge,ID_Rep)
-}#same
+  }
 
-  return(D1)}
+  return(D1)
+}#same
 data_loader_from_PartitionedParquet<-function(D){
   # Loading the data
 
@@ -580,8 +581,9 @@ data= fread(file=analyte_data,
 names(data)<-gsub(names(data),pattern = "\\.",replacement = "")
 names(data)<-gsub(names(data),pattern = " ",replacement = "")
 
-data <- data %>% filter(!is.na(LibraryIntensity))
-data <- Filter_Na_Shared_Or_LowMassTransitions(data)
+# data <- data %>% filter(!is.na(LibraryIntensity))
+data <- data %>% data.frame()
+# data <- Filter_Na_Shared_Or_LowMassTransitions(data)
 
 i = analyte_hash_id
 A<-AvantGardeDIA_GlobalRefinement_modif(data)
