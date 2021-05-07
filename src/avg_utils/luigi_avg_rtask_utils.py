@@ -1,6 +1,7 @@
 import subprocess
 import pandas as pd
 import os
+import multiprocessing as mp
 
 
 def generate_subprocess_call_for_a_analyte(hashed_id, csv_ds_root_path, params_file_path, output_dir):
@@ -28,6 +29,7 @@ def generate_subprocess_call_for_a_analyte(hashed_id, csv_ds_root_path, params_f
 
     return subprocess_call_for_r_script
 
+
 def run_r_script_for_an_analyte(hashed_id, csv_ds_root_path, params_file_path, output_dir):
     """ Generates a command and passes it to the subprocess module.
         The R script is run using the data for a analyte.
@@ -48,6 +50,7 @@ def run_r_script_for_an_analyte(hashed_id, csv_ds_root_path, params_file_path, o
 
     subprocess.call(subprocess_call_for_r_script, shell=True)
 
+
 def run_r_script_for_all_analytes(csv_ds_root_path, params_file_path, output_dir):
     """ Run the avant-garde R script for all analytes. Reads the 'ID_Analyte_glossary' file, that contains all
     hashed id values for all the analytes and iterates through it.
@@ -64,8 +67,15 @@ def run_r_script_for_all_analytes(csv_ds_root_path, params_file_path, output_dir
     dd = [w.replace('data_analyte_', '') for w in os.listdir(csv_ds_root_path)]
     dd = [w.replace('.csv', '') for w in dd]
     dd = pd.DataFrame(dd, columns=['ID_Analyte'])
-    dd['ID_Analyte'].map(lambda x: run_r_script_for_an_analyte(
-        hashed_id=x,
-        csv_ds_root_path=csv_ds_root_path,
-        params_file_path=params_file_path,
-        output_dir=output_dir))
+    # dd['ID_Analyte'].map(lambda x: run_r_script_for_an_analyte(
+    #     hashed_id=x,
+    #     csv_ds_root_path=csv_ds_root_path,
+    #     params_file_path=params_file_path,
+    #     output_dir=output_dir))
+
+    pool = mp.Pool(mp.cpu_count())
+
+    num_analytes = len(dd['ID_Analyte'])
+    pool.starmap(run_r_script_for_an_analyte,
+                 [(str(dd['ID_Analyte'][i]), csv_ds_root_path, params_file_path, output_dir) for i in range(num_analytes)])
+

@@ -580,8 +580,11 @@ data= fread(file=analyte_data,
 names(data)<-gsub(names(data),pattern = "\\.",replacement = "")
 names(data)<-gsub(names(data),pattern = " ",replacement = "")
 
-data <- data %>% filter(!is.na(LibraryIntensity))
-data <- Filter_Na_Shared_Or_LowMassTransitions(data)
+# data <- data %>% filter(!is.na(LibraryIntensity))
+data <- data %>%
+        data.frame()%>%
+        arrange(ID_FragmentIon_charge, ID_Rep , ID_Analyte)
+# data <- Filter_Na_Shared_Or_LowMassTransitions(data)
 
 i = analyte_hash_id
 A<-AvantGardeDIA_GlobalRefinement_modif(data)
