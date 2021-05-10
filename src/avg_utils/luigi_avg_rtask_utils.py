@@ -74,7 +74,9 @@ def run_r_script_for_all_analytes(csv_ds_root_path, params_file_path, output_dir
     #     output_dir=output_dir))
 
     pool = mp.Pool(mp.cpu_count())
-
+    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    print(mp.cpu_count())
+    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++")
     num_analytes = len(dd['ID_Analyte'])
     pool.starmap(run_r_script_for_an_analyte,
                  [(str(dd['ID_Analyte'][i]), csv_ds_root_path, params_file_path, output_dir) for i in range(num_analytes)])
