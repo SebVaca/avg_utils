@@ -151,7 +151,7 @@ def read_by_rowgroup_hashindex_and_partition_parquetFile(input_path, rootpath, c
         df['ID_FragmentIon_charge'] = df['ID_FragmentIon_charge'].map(lambda x: hash_value(x))
         df['ID_Rep'] = df['File Name'].astype(str).map(lambda x: hash_value(x))
 
-        table = pa.Table.from_pandas(df)
+        table = pa.Table.from_pandas(df, f.schema)
         pq.write_to_dataset(table,
                             root_path=rootpath,
                             partition_cols=['ID_Analyte'])
