@@ -151,6 +151,18 @@ def read_by_rowgroup_hashindex_and_partition_parquetFile(input_path, rootpath, c
         df['ID_FragmentIon_charge'] = df['ID_FragmentIon_charge'].map(lambda x: hash_value(x))
         df['ID_Rep'] = df['File Name'].astype(str).map(lambda x: hash_value(x))
 
+        # Correct types of columns
+
+        df = df.astype({'Protein Name': 'object', 'Peptide Modified Sequence': 'object', 'Modified Sequence': 'object',
+                    'Isotope Label Type': 'object', 'Is Decoy': 'bool', 'Precursor Charge': 'int64',
+                    'Precursor Mz': 'float64', 'Product Charge': 'int64', 'Product Mz': 'float64',
+                    'Fragment Ion': 'object', 'Transition Locator': 'object', 'Quantitative': 'bool',
+                    'File Name': 'object', 'Library Dot Product': 'float64', 'Min Start Time': 'float64',
+                    'Max End Time': 'float64', 'Area': 'float64', 'Library Intensity': 'float64',
+                    'Interpolated Times': 'object', 'Interpolated Intensities': 'object',
+                    'Interpolated Mass Errors': 'object', 'Precursor Result Locator': 'object',
+                    'ID_FragmentIon_charge': 'object', 'ID_Rep': 'object'})
+
         table = pa.Table.from_pandas(df, f.schema)
         pq.write_to_dataset(table,
                             root_path=rootpath,
