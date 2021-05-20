@@ -151,7 +151,48 @@ def read_by_rowgroup_hashindex_and_partition_parquetFile(input_path, rootpath, c
         df['ID_FragmentIon_charge'] = df['ID_FragmentIon_charge'].map(lambda x: hash_value(x))
         df['ID_Rep'] = df['File Name'].astype(str).map(lambda x: hash_value(x))
 
-        table = pa.Table.from_pandas(df)
+        # Correct types of columns
+
+        df = df.astype({'Protein Name': 'object', 'Peptide Modified Sequence': 'object', 'Modified Sequence': 'object',
+                    'Isotope Label Type': 'object', 'Is Decoy': 'bool', 'Precursor Charge': 'int64',
+                    'Precursor Mz': 'float64', 'Product Charge': 'int64', 'Product Mz': 'float64',
+                    'Fragment Ion': 'object', 'Transition Locator': 'object', 'Quantitative': 'bool',
+                    'File Name': 'object', 'Library Dot Product': 'float64', 'Min Start Time': 'float64',
+                    'Max End Time': 'float64', 'Area': 'float64', 'Library Intensity': 'float64',
+                    'Interpolated Times': 'object', 'Interpolated Intensities': 'object',
+                    'Interpolated Mass Errors': 'object', 'Precursor Result Locator': 'object',
+                    'ID_FragmentIon_charge': 'object', 'ID_Rep': 'object'})
+
+        fields = [pa.field('Protein Name', pa.string()),
+                  pa.field('Peptide Modified Sequence', pa.string()),
+                  pa.field('Modified Sequence', pa.string()),
+                  pa.field('Isotope Label Type', pa.string()),
+                  pa.field('Is Decoy', pa.bool_()),
+                  pa.field('Precursor Charge', pa.int64()),
+                  pa.field('Precursor Mz', pa.float64()),
+                  pa.field('Product Charge', pa.int64()),
+                  pa.field('Product Mz', pa.float64()),
+                  pa.field('Fragment Ion', pa.string()),
+                  pa.field('Transition Locator', pa.string()),
+                  pa.field('Quantitative', pa.bool_()),
+                  pa.field('File Name', pa.string()),
+                  pa.field('Library Dot Product', pa.float64()),
+                  pa.field('Min Start Time', pa.float64()),
+                  pa.field('Max End Time', pa.float64()),
+                  pa.field('Area', pa.float64()),
+                  pa.field('Library Intensity', pa.float64()),
+                  pa.field('Interpolated Times', pa.string()),
+                  pa.field('Interpolated Intensities', pa.string()),
+                  pa.field('Interpolated Mass Errors', pa.string()),
+                  pa.field('Precursor Result Locator', pa.string()),
+                  pa.field('ID_FragmentIon_charge', pa.string()),
+                  pa.field('ID_Rep', pa.string()),
+                  pa.field('ID_Analyte', pa.string()),
+                  ]
+
+        my_schema = pa.schema(fields)
+
+        table = pa.Table.from_pandas(df, my_schema)
         pq.write_to_dataset(table,
                             root_path=rootpath,
                             partition_cols=['ID_Analyte'])
@@ -285,10 +326,41 @@ def read_csv_by_chunks_createindices_and_partitionPQbygroup(input_csv_path,
                              chunksize=chunksize,
                              low_memory=False)
 
+    fields = [pa.field('Protein Name', pa.string()),
+              pa.field('Peptide Modified Sequence', pa.string()),
+              pa.field('Modified Sequence', pa.string()),
+              pa.field('Isotope Label Type', pa.string()),
+              pa.field('Is Decoy', pa.bool_()),
+              pa.field('Precursor Charge', pa.int64()),
+              pa.field('Precursor Mz', pa.float64()),
+              pa.field('Product Charge', pa.int64()),
+              pa.field('Product Mz', pa.float64()),
+              pa.field('Fragment Ion', pa.string()),
+              pa.field('Transition Locator', pa.string()),
+              pa.field('Quantitative', pa.bool_()),
+              pa.field('File Name', pa.string()),
+              pa.field('Library Dot Product', pa.float64()),
+              pa.field('Min Start Time', pa.float64()),
+              pa.field('Max End Time', pa.float64()),
+              pa.field('Area', pa.float64()),
+              pa.field('Library Intensity', pa.float64()),
+              pa.field('Interpolated Times', pa.string()),
+              pa.field('Interpolated Intensities', pa.string()),
+              pa.field('Interpolated Mass Errors', pa.string()),
+              pa.field('Precursor Result Locator', pa.string()),
+              pa.field('ID_FragmentIon_charge', pa.string()),
+              pa.field('ID_Rep', pa.string()),
+              pa.field('ID_Analyte', pa.string()),
+              pa.field('ID_group', pa.int64()),
+              ]
+
+    my_schema = pa.schema(fields)
+
     for i, chunk in enumerate(csv_stream):
         print("Chunk", i)
         df_annotated = create_indices(chunk, n_parts)
-        table = pa.Table.from_pandas(df=df_annotated)
+        table = pa.Table.from_pandas(df=df_annotated, schema=my_schema)
+
         pq.write_to_dataset(table,
                             root_path=parquet_dataset_output_path,
                             partition_cols=['ID_group', 'ID_Analyte'])
