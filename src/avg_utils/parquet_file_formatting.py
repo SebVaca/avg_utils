@@ -71,58 +71,6 @@ def convert_csv_to_parquet_by_chunks(input_csv_path, parquet_file_path, chunksiz
         parquet_writer.write_table(table)
     parquet_writer.close()
 
-
-def read_hashindex_and_partition_parquetFile(input_path, rootpath, csv_ds_root_path, id_analyte_path):
-    """ Read the parquet file, create the hashed index for each analyte and create teh partitions
-        :param str input_path: path to the parquet file
-        :param str rootpath: path to the parquet dataset folder
-        :param str csv_ds_root_path: path to the folder of temporary csv files
-        :param str id_analyte_path: output path of the 'ID_Analyte_glossary' file. This file contains the values of all
-        hashed ids and it is used as the _SUCCESS file
-
-        :returns: parquet dataset partitioned by the hashed id of the analyte (ID_Analyte), creates the
-        'ID_Analyte_glossary' file.
-
-        """
-    df = pq.read_pandas(input_path).to_pandas()
-
-    # Concatenate values from multiple columns to create a unique identifier for each
-    # Analyte, transition (signal) and MS acquisition (Mass spectrometry analysis)
-
-    df['ID_Analyte'] = df['Protein Name'].astype(str) + '_' + df['Peptide Modified Sequence'].astype(str) + '_' + \
-                       df['Precursor Charge'].astype(str) + df['Is Decoy'].astype(str)
-    df['ID_FragmentIon_charge'] = df['Fragment Ion'].astype(str) + '_' + df['Product Charge'].astype(str)
-
-    # Hashed the values to obtain the unique identifier
-    df['ID_Analyte'] = df['ID_Analyte'].map(lambda x: hash_value(x))
-    df['ID_FragmentIon_charge'] = df['ID_FragmentIon_charge'].map(lambda x: hash_value(x))
-    df['ID_Rep'] = df['File Name'].astype(str).map(lambda x: hash_value(x))
-
-    table = pa.Table.from_pandas(df)
-    pq.write_to_dataset(table,
-                        root_path=rootpath,
-                        partition_cols=['ID_Analyte'])
-
-    ## Create directory files to save the correspondance of the hash ids and the real values
-    df_ID_FragmentIon_charge = df[['ID_FragmentIon_charge',
-                                   'Fragment Ion',
-                                   'Product Charge']].drop_duplicates()
-    df_ID_FragmentIon_charge.to_csv(csv_ds_root_path + "ID_FragmentIon_charge.csv", index=False)
-
-    df_ID_Rep = df[['ID_Rep', 'File Name']].drop_duplicates()
-    df_ID_Rep.to_csv(csv_ds_root_path + "ID_Rep.csv", index=False, header=True)
-
-    df_transition_locator = df[['Transition Locator', 'ID_FragmentIon_charge', 'ID_Analyte']].drop_duplicates()
-    df_transition_locator.to_csv(csv_ds_root_path + "ID_transition_locator.csv", index=False)
-
-    df_ID_Analyte = df[['ID_Analyte',
-                        'Protein Name',
-                        'Peptide Modified Sequence',
-                        'Precursor Charge',
-                        'Is Decoy']].drop_duplicates()
-    df_ID_Analyte.to_csv(id_analyte_path, index=False)
-
-
 def read_by_rowgroup_hashindex_and_partition_parquetFile(input_path, rootpath, csv_ds_root_path, id_analyte_path):
     """ Read the parquet file, create the hashed index for each analyte and create teh partitions
         :param str input_path: path to the parquet file
@@ -306,7 +254,6 @@ class SaltString():
             print("file not yet created")
 
 
-
 def read_csv_by_chunks_createindices_and_partitionPQbygroup(input_csv_path,
                                                             parquet_dataset_output_path,
                                                             indices_csv_output_path,
@@ -317,9 +264,7 @@ def read_csv_by_chunks_createindices_and_partitionPQbygroup(input_csv_path,
         :param str parquet_dataset_path: path to the output parquet file
         :param int chunksize: size of the chunk to read
         :param int n_parts: number of partitions
-
         :returns: parquet file
-
         """
     csv_stream = pd.read_csv(input_csv_path,
                              sep=',',
@@ -356,11 +301,11 @@ def read_csv_by_chunks_createindices_and_partitionPQbygroup(input_csv_path,
 
     my_schema = pa.schema(fields)
 
+
     for i, chunk in enumerate(csv_stream):
         print("Chunk", i)
         df_annotated = create_indices(chunk, n_parts)
         table = pa.Table.from_pandas(df=df_annotated, schema=my_schema)
-
         pq.write_to_dataset(table,
                             root_path=parquet_dataset_output_path,
                             partition_cols=['ID_group', 'ID_Analyte'])
@@ -419,7 +364,7 @@ def read_csv_by_chunks_createindices_and_partitionPQbygroup(input_csv_path,
                                     'Precursor Charge',
                                     'Is Decoy',
                                     'File Name']].drop_duplicates()
-        write_to_same_csv_appending(df_ID_PrecursorResult, i, csv_ds_root_path, "MetaData_PrecursorResults.csv")
+        write_to_same_csv_appending(df_ID_PrecursorResult, i, indices_csv_output_path, "MetaData_PrecursorResults.csv")
 
     # read, drop duplicates and write file again
     def read_drop_duplicates_rewrite(path):
@@ -431,7 +376,9 @@ def read_csv_by_chunks_createindices_and_partitionPQbygroup(input_csv_path,
     read_drop_duplicates_rewrite(os.path.join(indices_csv_output_path, "ID_Analyte.csv"))
     read_drop_duplicates_rewrite(os.path.join(indices_csv_output_path, "ID_Analyte_withgroup.csv"))
     # new
-    read_drop_duplicates_rewrite(indices_csv_output_path, "MetaData_PrecursorResults.csv")
+    read_drop_duplicates_rewrite(os.path.join(indices_csv_output_path, "MetaData_PrecursorResults.csv"))
+
+
 
 
 def create_indices(pandas_df, n_parts):
